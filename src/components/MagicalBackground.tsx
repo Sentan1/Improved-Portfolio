@@ -6,7 +6,8 @@ const MagicalBackground = () => {
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url('/lovable-uploads/3acf2247-856c-4edc-87a1-0e6190b66978.png')`
+          backgroundImage: `url('${import.meta.env.BASE_URL}Image/Background.png')`,
+
         }}
       >
         {/* Dark overlay to match the theme */}
@@ -44,7 +45,9 @@ const MagicalBackground = () => {
       <div className="absolute top-1/4 right-1/4 w-4 h-4 bg-slate-400/20 rounded-full animate-glow"></div>
       <div className="absolute bottom-1/4 left-1/4 w-6 h-6 bg-slate-300/15 rounded-full animate-glow opacity-60"></div>
     </div>
+    
   );
 };
+console.log("✅ MagicalBackground rendered");
 
 export default MagicalBackground;

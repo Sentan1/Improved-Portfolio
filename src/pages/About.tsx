@@ -14,7 +14,9 @@ const About = () => {
     <div 
       className="min-h-screen relative overflow-hidden bg-slate-900"
       style={{
-        backgroundImage: `url('/lovable-uploads/3acf2247-856c-4edc-87a1-0e6190b66978.png')`,
+        backgroundImage: `url('${import.meta.env.BASE_URL}Image/Background.png')`,
+
+
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
@@ -79,18 +81,16 @@ const About = () => {
             
             <div className="space-y-5 text-slate-300 leading-relaxed">
               <p className="text-base">
-                I am a passionate web developer with expertise in modern technologies and creative problem-solving. 
-                I enjoy building innovative digital experiences that combine functionality with aesthetic appeal.
+                My Name is Adrian Tan. Im currently studying associates of information technology. I enjoy programming digital experiences that combine functionality with aethetics
+
               </p>
               
               <p className="text-sm">
-                With a strong foundation in frontend development, I specialize in React, TypeScript, and modern 
-                design systems. I believe in writing clean, maintainable code and creating user-centered solutions.
+               Im a early developer, i know the basics of HTML, JAVA, CSS, TYPESCRIPT, JAVASCRIPT, REACT and PYTHON. I continue to grow my knowledge and understanding through projects and challenges.
               </p>
               
               <p className="text-sm">
-                My approach to development focuses on attention to detail, performance optimization, and 
-                delivering high-quality applications that meet both user needs and business objectives.
+                Aside from programming, my other hobbies include 3d Modelling, Gaming, Watching Anime, and Badminton
               </p>
               
               <div className="pt-4">
