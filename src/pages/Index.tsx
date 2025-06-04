@@ -72,7 +72,7 @@ const Index = () => {
           </h1>
           
           <p className="text-lg md:text-xl text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto">
-            Welcome to my portfolio showcasing modern web development projects, creative solutions, and innovative design work.
+            Welcome to my portfolio showcasing programming projects.
           </p>
           
           <Link 

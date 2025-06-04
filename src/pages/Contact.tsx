@@ -16,7 +16,7 @@ const Contact = () => {
     <div 
       className="min-h-screen relative overflow-hidden bg-slate-900"
       style={{
-        backgroundImage: `url('/lovable-uploads/3acf2247-856c-4edc-87a1-0e6190b66978.png')`,
+        backgroundImage: `url('/Image/Background.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
