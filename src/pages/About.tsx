@@ -81,12 +81,13 @@ const About = () => {
             
             <div className="space-y-5 text-slate-300 leading-relaxed">
               <p className="text-base">
-                My Name is Adrian Tan. Im currently studying associates of information technology. I enjoy programming digital experiences that combine functionality with aethetics
+                My name is Adrian Tan. I'm currently studying an Associate Degree in Information Technology. I enjoy programming digital experiences that blend functionality with aesthetics.
 
               </p>
               
               <p className="text-sm">
-               Im a early developer, i know the basics of HTML, JAVA, CSS, TYPESCRIPT, JAVASCRIPT, REACT and PYTHON. I continue to grow my knowledge and understanding through projects and challenges.
+               I'm an early-stage developer with basic knowledge of HTML, Java, CSS, TypeScript, JavaScript, React, and Python. I continue to grow my skills through personal projects and challenges.
+
               </p>
               
               <p className="text-sm">
@@ -96,7 +97,7 @@ const About = () => {
               <div className="pt-4">
                 <h3 className="text-lg font-semibold text-slate-200 mb-3">Skills & Expertise</h3>
                 <div className="flex flex-wrap gap-2">
-                  {['Frontend Development', 'React & TypeScript', 'UI/UX Design', 'Web Performance', 'Problem Solving'].map((skill) => (
+                  {[, 'Java', 'UI/UX Design', 'Problem Solving'].map((skill) => (
                     <span key={skill} className="px-3 py-1 bg-slate-700 rounded-full text-slate-300 text-sm font-medium">
                       {skill}
                     </span>
