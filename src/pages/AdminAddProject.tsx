@@ -11,6 +11,7 @@ const AdminAddProject = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
   const [tech, setTech] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -90,6 +91,7 @@ const AdminAddProject = () => {
         title: title.trim(),
         description: description.trim(),
         category: category.trim() || undefined,
+        filterCategory: filterCategory.trim() || undefined,
         tech: tech
           .split(",")
           .map((t) => t.trim())
@@ -145,6 +147,10 @@ const AdminAddProject = () => {
           <div className="space-y-2">
             <Label htmlFor="category" className="text-slate-200">Category (e.g., React, Native, 3D Modelling)</Label>
             <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="React" className="bg-slate-700/50 border-slate-600 text-slate-100" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="filter-category" className="text-slate-200">Filter Category (e.g., Web, Mobile, Game, Design)</Label>
+            <Input id="filter-category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} placeholder="Web" className="bg-slate-700/50 border-slate-600 text-slate-100" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="tech" className="text-slate-200">General tags (comma-separated)</Label>

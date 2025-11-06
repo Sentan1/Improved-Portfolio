@@ -3,6 +3,7 @@ export type Project = {
   title: string;
   description: string;
   category?: string; // e.g., "React", "Native", "3D Modelling"
+  filterCategory?: string; // Third category for filtering (e.g., "Web", "Mobile", "Game", "Design")
   tech: string[]; // general tags like "Tech", "Stack", "Here"
   images?: string[]; // base64 data URLs
   color?: string; // tailwind gradient suffix for fallback styling

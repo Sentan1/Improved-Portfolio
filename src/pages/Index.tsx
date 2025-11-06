@@ -24,7 +24,9 @@ const Index = () => {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [editFilterCategory, setEditFilterCategory] = useState("");
   const [editTech, setEditTech] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [experience, setExperience] = useState<Experience[]>([]);
@@ -35,6 +37,25 @@ const Index = () => {
     setProjects([...data.projects]); // Create new array to force re-render
     setExperience([...data.experience]); // Create new array to force re-render
   };
+
+  // Get unique filter categories from projects
+  const filterCategories = useMemo(() => {
+    const categories = new Set<string>();
+    projects.forEach(p => {
+      if (p.filterCategory) {
+        categories.add(p.filterCategory);
+      }
+    });
+    return Array.from(categories).sort();
+  }, [projects]);
+
+  // Filter projects based on selected filter
+  const filteredProjects = useMemo(() => {
+    if (selectedFilter === "all") {
+      return projects;
+    }
+    return projects.filter(p => p.filterCategory === selectedFilter);
+  }, [projects, selectedFilter]);
 
   useEffect(() => {
     refresh();
@@ -175,12 +196,44 @@ const Index = () => {
 
       {/* Projects Section */}
       <section className="relative z-10 container mx-auto px-6 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-slate-200 to-slate-300 bg-clip-text text-transparent">
+        <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-slate-200 to-slate-300 bg-clip-text text-transparent">
           Featured Projects
         </h2>
         
+        {/* Filter Buttons */}
+        <div className="flex flex-wrap justify-center gap-3 mb-8 max-w-6xl mx-auto">
+          <Button
+            variant={selectedFilter === "all" ? "default" : "outline"}
+            onClick={() => setSelectedFilter("all")}
+            className={selectedFilter === "all" 
+              ? "bg-slate-700 hover:bg-slate-600 text-slate-100" 
+              : "bg-slate-800/50 border-slate-600 text-slate-300 hover:bg-slate-700/50"
+            }
+          >
+            All Projects
+          </Button>
+          {filterCategories.map((cat) => (
+            <Button
+              key={cat}
+              variant={selectedFilter === cat ? "default" : "outline"}
+              onClick={() => setSelectedFilter(cat)}
+              className={selectedFilter === cat
+                ? "bg-slate-700 hover:bg-slate-600 text-slate-100"
+                : "bg-slate-800/50 border-slate-600 text-slate-300 hover:bg-slate-700/50"
+              }
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+        
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {projects.map((project) => (
+          {filteredProjects.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-slate-400 text-lg">No projects found in this category.</p>
+            </div>
+          ) : (
+            filteredProjects.map((project) => (
             <div 
               key={project.id}
               className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-slate-700/50 cursor-pointer"
@@ -206,8 +259,8 @@ const Index = () => {
               
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-lg font-bold text-slate-200">
-                  {project.title}
-                </h3>
+                {project.title}
+              </h3>
                 {project.category && (
                   <span className="px-2 py-1 bg-slate-600 text-slate-200 rounded-full text-xs font-medium">
                     {project.category}
@@ -237,6 +290,7 @@ const Index = () => {
                     setEditTitle(project.title);
                     setEditDescription(project.description);
                     setEditCategory(project.category || "");
+                    setEditFilterCategory(project.filterCategory || "");
                     setEditTech(project.tech.join(", "));
                     setEditProjectOpen(true);
                   }}>
@@ -253,7 +307,8 @@ const Index = () => {
                 </div>
               )}
             </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
 
@@ -345,6 +400,16 @@ const Index = () => {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit-filter-category" className="text-slate-200">Filter Category (e.g., Web, Mobile, Game, Design)</Label>
+                <Input 
+                  id="edit-filter-category" 
+                  value={editFilterCategory} 
+                  onChange={(e) => setEditFilterCategory(e.target.value)} 
+                  placeholder="Web"
+                  className="bg-slate-700/50 border-slate-600 text-slate-100" 
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="edit-tech" className="text-slate-200">General tags (comma-separated)</Label>
                 <Input 
                   id="edit-tech" 
@@ -361,6 +426,7 @@ const Index = () => {
                     title: editTitle.trim(),
                     description: editDescription.trim(),
                     category: editCategory.trim() || undefined,
+                    filterCategory: editFilterCategory.trim() || undefined,
                     tech: editTech.split(",").map((t) => t.trim()).filter(Boolean),
                   });
                   refresh();
