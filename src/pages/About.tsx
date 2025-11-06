@@ -1,9 +1,77 @@
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getProfilePhoto, setProfilePhoto, fileToDataUrl, isAdmin, getAboutContent, setAboutContent, type AboutContent } from "@/lib/storage";
 
 const About = () => {
   const navigate = useNavigate();
+  const [profilePhoto, setProfilePhotoState] = useState<string | undefined>(getProfilePhoto());
+  const [isAdminMode, setIsAdminMode] = useState(isAdmin());
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [aboutContent, setAboutContentState] = useState<AboutContent>(getAboutContent());
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editPara1, setEditPara1] = useState("");
+  const [editPara2, setEditPara2] = useState("");
+  const [editPara3, setEditPara3] = useState("");
+  const [editSkills, setEditSkills] = useState("");
+
+  useEffect(() => {
+    setProfilePhotoState(getProfilePhoto());
+    setIsAdminMode(isAdmin());
+    setAboutContentState(getAboutContent());
+  }, []);
+
+  const handleEditAbout = () => {
+    setEditPara1(aboutContent.paragraph1 || "");
+    setEditPara2(aboutContent.paragraph2 || "");
+    setEditPara3(aboutContent.paragraph3 || "");
+    setEditSkills((aboutContent.skills || []).join(", "));
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveAbout = () => {
+    const updated: AboutContent = {
+      paragraph1: editPara1.trim(),
+      paragraph2: editPara2.trim(),
+      paragraph3: editPara3.trim(),
+      skills: editSkills.split(",").map(s => s.trim()).filter(Boolean),
+    };
+    setAboutContent(updated);
+    setAboutContentState(updated);
+    setEditDialogOpen(false);
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!photoFile) return;
+    setUploading(true);
+    try {
+      // Use compression for profile photo too
+      const dataUrl = await fileToDataUrl(photoFile);
+      setProfilePhoto(dataUrl);
+      setProfilePhotoState(dataUrl);
+      setPhotoFile(null);
+      // Reset file input
+      const fileInput = document.getElementById('profile-photo-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to upload photo';
+      if (errorMsg.includes('quota')) {
+        alert('Storage limit exceeded. Please use a smaller image.');
+      } else {
+        alert(`Failed to upload photo: ${errorMsg}`);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleBackToPortfolio = () => {
     console.log('Navigating to home page');
@@ -46,14 +114,14 @@ const About = () => {
       {/* Main Content */}
       <div className="relative z-10 container mx-auto px-6 py-20 flex flex-col lg:flex-row items-center gap-12">
         {/* Profile Section */}
-        <div className="flex-1 flex justify-center">
+        <div className="flex-1 flex flex-col items-center gap-4">
           <div className="relative">
             {/* Profile Frame */}
             <div className="relative w-72 h-72 bg-gradient-to-br from-slate-700 via-slate-600 to-slate-700 rounded-full p-6 shadow-2xl border-8 border-slate-800">
               <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 rounded-full border-4 border-slate-600 overflow-hidden shadow-inner relative">
-                {/* Profile Picture Placeholder */}
+                {/* Profile Picture */}
                 <img 
-                  src="/placeholder.svg" 
+                  src={profilePhoto || "/placeholder.svg"} 
                   alt="Profile Picture" 
                   className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-300"
                 />
@@ -70,43 +138,137 @@ const About = () => {
               <div className="absolute -bottom-8 -right-8 w-3 h-3 bg-slate-400 rounded-full animate-pulse opacity-35"></div>
             </div>
           </div>
+          {isAdminMode && (
+            <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 max-w-xs w-full">
+              <Label htmlFor="profile-photo-input" className="text-slate-200 mb-2 block">Edit Profile Photo</Label>
+              <Input 
+                id="profile-photo-input"
+                type="file" 
+                accept="image/png" 
+                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                className="bg-slate-700/50 border-slate-600 text-slate-100 file:text-slate-200 mb-2"
+              />
+              {photoFile && (
+                <Button 
+                  onClick={handlePhotoUpload} 
+                  disabled={uploading}
+                  className="w-full bg-slate-700 hover:bg-slate-600"
+                >
+                  {uploading ? "Uploading..." : "Upload Photo"}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* About Content */}
         <div className="flex-1 max-w-2xl">
-          <div className="bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-slate-700/50">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-100 to-slate-200 bg-clip-text text-transparent mb-6">
-              About Me
-            </h1>
+          <div className="bg-slate-800/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-slate-700/50 relative">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-100 to-slate-200 bg-clip-text text-transparent">
+                About Me
+              </h1>
+              {isAdminMode && (
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  onClick={handleEditAbout}
+                  className="bg-slate-700 hover:bg-slate-600"
+                >
+                  <Pencil className="w-4 h-4 mr-2" /> Edit
+                </Button>
+              )}
+            </div>
             
             <div className="space-y-5 text-slate-300 leading-relaxed">
-              <p className="text-base">
-                My name is Adrian Tan. I'm currently studying an Associate Degree in Information Technology. I enjoy programming digital experiences that blend functionality with aesthetics.
-
-              </p>
+              {aboutContent.paragraph1 && (
+                <p className="text-base whitespace-pre-wrap">
+                  {aboutContent.paragraph1}
+                </p>
+              )}
               
-              <p className="text-sm">
-               I'm an early-stage developer with basic knowledge of HTML, Java, CSS, TypeScript, JavaScript, React, and Python. I continue to grow my skills through personal projects and challenges.
-
-              </p>
+              {aboutContent.paragraph2 && (
+                <p className="text-sm whitespace-pre-wrap">
+                  {aboutContent.paragraph2}
+                </p>
+              )}
               
-              <p className="text-sm">
-                Aside from programming, my other hobbies include 3d Modelling, Gaming, Watching Anime, and Badminton
-              </p>
+              {aboutContent.paragraph3 && (
+                <p className="text-sm whitespace-pre-wrap">
+                  {aboutContent.paragraph3}
+                </p>
+              )}
               
-              <div className="pt-4">
-                <h3 className="text-lg font-semibold text-slate-200 mb-3">Skills & Expertise</h3>
-                <div className="flex flex-wrap gap-2">
-                  {[, 'Java', 'UI/UX Design', 'Problem Solving'].map((skill) => (
-                    <span key={skill} className="px-3 py-1 bg-slate-700 rounded-full text-slate-300 text-sm font-medium">
-                      {skill}
-                    </span>
-                  ))}
+              {aboutContent.skills && aboutContent.skills.length > 0 && (
+                <div className="pt-4">
+                  <h3 className="text-lg font-semibold text-slate-200 mb-3">Skills & Expertise</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {aboutContent.skills.map((skill, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-slate-700 rounded-full text-slate-300 text-sm font-medium">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Edit About Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit About Me</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="para1" className="text-slate-200">First Paragraph</Label>
+                <Textarea 
+                  id="para1"
+                  value={editPara1} 
+                  onChange={(e) => setEditPara1(e.target.value)} 
+                  rows={3}
+                  className="bg-slate-700/50 border-slate-600 text-slate-100" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="para2" className="text-slate-200">Second Paragraph</Label>
+                <Textarea 
+                  id="para2"
+                  value={editPara2} 
+                  onChange={(e) => setEditPara2(e.target.value)} 
+                  rows={3}
+                  className="bg-slate-700/50 border-slate-600 text-slate-100" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="para3" className="text-slate-200">Third Paragraph</Label>
+                <Textarea 
+                  id="para3"
+                  value={editPara3} 
+                  onChange={(e) => setEditPara3(e.target.value)} 
+                  rows={2}
+                  className="bg-slate-700/50 border-slate-600 text-slate-100" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="skills" className="text-slate-200">Skills (comma-separated)</Label>
+                <Input 
+                  id="skills"
+                  value={editSkills} 
+                  onChange={(e) => setEditSkills(e.target.value)} 
+                  placeholder="Java, UI/UX Design, Problem Solving"
+                  className="bg-slate-700/50 border-slate-600 text-slate-100" 
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="secondary" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveAbout}>Save Changes</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Floating Character Elements */}
