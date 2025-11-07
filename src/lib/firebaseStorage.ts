@@ -28,6 +28,29 @@ function isFirebaseConfigured(): boolean {
   return projectId && projectId !== "YOUR_PROJECT_ID" && projectId.length > 0;
 }
 
+// Remove undefined values from data (Firestore doesn't allow undefined)
+function removeUndefined<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefined(item)) as T;
+  }
+  
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = removeUndefined(value);
+      }
+    }
+    return cleaned as T;
+  }
+  
+  return obj;
+}
+
 // Load portfolio data from Firestore
 export async function loadDataFromFirebase(): Promise<PortfolioData | null> {
   if (!isFirebaseConfigured()) {
@@ -61,8 +84,10 @@ export async function saveDataToFirebase(data: PortfolioData): Promise<void> {
   }
 
   try {
+    // Remove undefined values (Firestore doesn't allow undefined)
+    const cleanedData = removeUndefined(data);
     const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
-    await setDoc(docRef, data, { merge: true });
+    await setDoc(docRef, cleanedData, { merge: true });
     console.log("Saved data to Firebase");
   } catch (error) {
     console.error("Error saving to Firebase:", error);
