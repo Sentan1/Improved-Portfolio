@@ -7,15 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getProfilePhoto, setProfilePhoto, fileToDataUrl, isAdmin, getAboutContent, setAboutContent, type AboutContent } from "@/lib/storage";
+import { getProfilePhoto, getProfilePhotoSync, setProfilePhoto, fileToDataUrl, isAdmin, getAboutContent, getAboutContentSync, setAboutContent, type AboutContent } from "@/lib/storage";
 
 const About = () => {
   const navigate = useNavigate();
-  const [profilePhoto, setProfilePhotoState] = useState<string | undefined>(getProfilePhoto());
+  const [profilePhoto, setProfilePhotoState] = useState<string | undefined>(getProfilePhotoSync());
   const [isAdminMode, setIsAdminMode] = useState(isAdmin());
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [aboutContent, setAboutContentState] = useState<AboutContent>(getAboutContent());
+  const [aboutContent, setAboutContentState] = useState<AboutContent>(getAboutContentSync());
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editPara1, setEditPara1] = useState("");
   const [editPara2, setEditPara2] = useState("");
@@ -23,9 +23,14 @@ const About = () => {
   const [editSkills, setEditSkills] = useState("");
 
   useEffect(() => {
-    setProfilePhotoState(getProfilePhoto());
+    const loadData = async () => {
+      const photo = await getProfilePhoto();
+      const content = await getAboutContent();
+      setProfilePhotoState(photo);
+      setAboutContentState(content);
+    };
+    loadData();
     setIsAdminMode(isAdmin());
-    setAboutContentState(getAboutContent());
   }, []);
 
   const handleEditAbout = () => {
@@ -36,14 +41,14 @@ const About = () => {
     setEditDialogOpen(true);
   };
 
-  const handleSaveAbout = () => {
+  const handleSaveAbout = async () => {
     const updated: AboutContent = {
       paragraph1: editPara1.trim(),
       paragraph2: editPara2.trim(),
       paragraph3: editPara3.trim(),
       skills: editSkills.split(",").map(s => s.trim()).filter(Boolean),
     };
-    setAboutContent(updated);
+    await setAboutContent(updated);
     setAboutContentState(updated);
     setEditDialogOpen(false);
   };

@@ -87,7 +87,7 @@ const AdminAddProject = () => {
         }
       }
       
-      const newProject = addProject({
+      const newProject = await addProject({
         title: title.trim(),
         description: description.trim(),
         category: category.trim() || undefined,
@@ -104,7 +104,7 @@ const AdminAddProject = () => {
       
       // Verify it's in storage
       const { loadData } = await import("@/lib/storage");
-      const verifyData = loadData();
+      const verifyData = await loadData();
       console.log('Projects in storage after save:', verifyData.projects.length);
       
       // Dispatch custom event to trigger refresh on home page

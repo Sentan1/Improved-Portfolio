@@ -74,7 +74,30 @@ function getDefaultData(): PortfolioData {
   };
 }
 
-export function loadData(): PortfolioData {
+export async function loadData(): Promise<PortfolioData> {
+  // Try Firebase first if configured
+  try {
+    const { loadDataFromFirebase } = await import("./firebaseStorage");
+    const firebaseData = await loadDataFromFirebase();
+    if (firebaseData) {
+      // Migrate older single-image shape to images[]
+      firebaseData.projects = firebaseData.projects.map((p: any) => {
+        if (!p.images && p.imageDataUrl) {
+          return { ...p, images: [p.imageDataUrl] } as Project;
+        }
+        return p as Project;
+      });
+      // Also save to localStorage as backup
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(firebaseData));
+      } catch {}
+      return firebaseData;
+    }
+  } catch (error) {
+    console.log("Firebase not available, using localStorage:", error);
+  }
+
+  // Fallback to localStorage
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return getDefaultData();
@@ -93,7 +116,36 @@ export function loadData(): PortfolioData {
   }
 }
 
-export function saveData(data: PortfolioData): void {
+// Synchronous version for backwards compatibility (returns default data, will be updated async)
+export function loadDataSync(): PortfolioData {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return getDefaultData();
+    const parsed = JSON.parse(raw) as PortfolioData;
+    if (!parsed.projects || !parsed.experience) return getDefaultData();
+    parsed.projects = parsed.projects.map((p: any) => {
+      if (!p.images && p.imageDataUrl) {
+        return { ...p, images: [p.imageDataUrl] } as Project;
+      }
+      return p as Project;
+    });
+    return parsed;
+  } catch {
+    return getDefaultData();
+  }
+}
+
+export async function saveData(data: PortfolioData): Promise<void> {
+  // Try Firebase first if configured
+  try {
+    const { saveDataToFirebase } = await import("./firebaseStorage");
+    await saveDataToFirebase(data);
+    console.log("Saved to Firebase");
+  } catch (error) {
+    console.log("Firebase save failed, using localStorage:", error);
+  }
+
+  // Always save to localStorage as backup
   try {
     const jsonData = JSON.stringify(data);
     // Check approximate size (rough estimate: 1 char ≈ 1 byte)
@@ -129,44 +181,44 @@ export function setAdmin(enabled: boolean): void {
   localStorage.setItem(ADMIN_KEY, enabled ? "true" : "false");
 }
 
-export function addProject(project: Omit<Project, "id">): Project {
-  const data = loadData();
+export async function addProject(project: Omit<Project, "id">): Promise<Project> {
+  const data = await loadData();
   const newProject: Project = { id: generateId("proj"), ...project };
   data.projects.unshift(newProject);
-  saveData(data);
+  await saveData(data);
   return newProject;
 }
 
-export function updateProject(id: string, updates: Partial<Project>): void {
-  const data = loadData();
+export async function updateProject(id: string, updates: Partial<Project>): Promise<void> {
+  const data = await loadData();
   data.projects = data.projects.map((p) => (p.id === id ? { ...p, ...updates, id: p.id } : p));
-  saveData(data);
+  await saveData(data);
 }
 
-export function deleteProject(id: string): void {
-  const data = loadData();
+export async function deleteProject(id: string): Promise<void> {
+  const data = await loadData();
   data.projects = data.projects.filter((p) => p.id !== id);
-  saveData(data);
+  await saveData(data);
 }
 
-export function addExperience(exp: Omit<Experience, "id">): Experience {
-  const data = loadData();
+export async function addExperience(exp: Omit<Experience, "id">): Promise<Experience> {
+  const data = await loadData();
   const newExp: Experience = { id: generateId("exp"), ...exp };
   data.experience.push(newExp);
-  saveData(data);
+  await saveData(data);
   return newExp;
 }
 
-export function updateExperience(id: string, updates: Partial<Experience>): void {
-  const data = loadData();
+export async function updateExperience(id: string, updates: Partial<Experience>): Promise<void> {
+  const data = await loadData();
   data.experience = data.experience.map((e) => (e.id === id ? { ...e, ...updates, id: e.id } : e));
-  saveData(data);
+  await saveData(data);
 }
 
-export function deleteExperience(id: string): void {
-  const data = loadData();
+export async function deleteExperience(id: string): Promise<void> {
+  const data = await loadData();
   data.experience = data.experience.filter((e) => e.id !== id);
-  saveData(data);
+  await saveData(data);
 }
 
 /**
@@ -276,19 +328,34 @@ export async function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-export function getProfilePhoto(): string | undefined {
-  const data = loadData();
+export async function getProfilePhoto(): Promise<string | undefined> {
+  const data = await loadData();
   return data.profilePhoto;
 }
 
-export function setProfilePhoto(photoDataUrl: string): void {
-  const data = loadData();
-  data.profilePhoto = photoDataUrl;
-  saveData(data);
+export function getProfilePhotoSync(): string | undefined {
+  const data = loadDataSync();
+  return data.profilePhoto;
 }
 
-export function getAboutContent(): AboutContent {
-  const data = loadData();
+export async function setProfilePhoto(photoDataUrl: string): Promise<void> {
+  try {
+    // Try uploading to Firebase Storage if configured
+    const { uploadProfilePhotoToFirebase } = await import("./firebaseStorage");
+    const firebaseUrl = await uploadProfilePhotoToFirebase(photoDataUrl);
+    const data = await loadData();
+    data.profilePhoto = firebaseUrl;
+    await saveData(data);
+  } catch {
+    // Fallback to data URL
+    const data = await loadData();
+    data.profilePhoto = photoDataUrl;
+    await saveData(data);
+  }
+}
+
+export async function getAboutContent(): Promise<AboutContent> {
+  const data = await loadData();
   if (data.aboutContent) {
     return data.aboutContent;
   }
@@ -301,10 +368,23 @@ export function getAboutContent(): AboutContent {
   };
 }
 
-export function setAboutContent(content: AboutContent): void {
-  const data = loadData();
+export function getAboutContentSync(): AboutContent {
+  const data = loadDataSync();
+  if (data.aboutContent) {
+    return data.aboutContent;
+  }
+  return {
+    paragraph1: "My name is Adrian Tan. I'm currently studying an Associate Degree in Information Technology. I enjoy programming digital experiences that blend functionality with aesthetics.",
+    paragraph2: "I'm an early-stage developer with basic knowledge of HTML, Java, CSS, TypeScript, JavaScript, React, and Python. I continue to grow my skills through personal projects and challenges.",
+    paragraph3: "Aside from programming, my other hobbies include 3d Modelling, Gaming, Watching Anime, and Badminton",
+    skills: ['Java', 'UI/UX Design', 'Problem Solving']
+  };
+}
+
+export async function setAboutContent(content: AboutContent): Promise<void> {
+  const data = await loadData();
   data.aboutContent = content;
-  saveData(data);
+  await saveData(data);
 }
 
 

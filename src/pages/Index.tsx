@@ -31,8 +31,8 @@ const Index = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [experience, setExperience] = useState<Experience[]>([]);
 
-  const refresh = () => {
-    const data = loadData();
+  const refresh = async () => {
+    const data = await loadData();
     console.log('Refreshing data, projects count:', data.projects.length);
     setProjects([...data.projects]); // Create new array to force re-render
     setExperience([...data.experience]); // Create new array to force re-render
@@ -63,10 +63,10 @@ const Index = () => {
 
   // Refresh when location changes (e.g., returning from add project page)
   useEffect(() => {
-    // Add a small delay to ensure localStorage is updated
+    // Add a small delay to ensure data is updated
     const timer = setTimeout(() => {
       refresh();
-    }, 50);
+    }, 100);
     return () => clearTimeout(timer);
   }, [location.pathname, location.hash]);
   
@@ -296,9 +296,9 @@ const Index = () => {
                   }}>
                     <Pencil className="w-4 h-4 mr-1" /> Edit
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => {
+                  <Button size="sm" variant="destructive" onClick={async () => {
                     if (confirm("Delete this project?")) {
-                      deleteProject(project.id);
+                      await deleteProject(project.id);
                       refresh();
                     }
                   }}>
@@ -421,8 +421,8 @@ const Index = () => {
               </div>
               <div className="flex gap-3 pt-2">
                 <Button variant="secondary" onClick={() => setEditProjectOpen(false)}>Cancel</Button>
-                <Button onClick={() => {
-                  updateProject(editingProject.id, {
+                <Button onClick={async () => {
+                  await updateProject(editingProject.id, {
                     title: editTitle.trim(),
                     description: editDescription.trim(),
                     category: editCategory.trim() || undefined,
@@ -460,18 +460,18 @@ const Index = () => {
                 </div>
                 {isAdmin && (
                   <div className="flex gap-2 mt-4">
-                    <Button size="sm" variant="secondary" onClick={() => {
+                    <Button size="sm" variant="secondary" onClick={async () => {
                       const newName = prompt("Edit experience name", exp.name) || exp.name;
                       const raw = prompt("Set percentage (0-100)", String(exp.level));
                       const num = Math.max(0, Math.min(100, Number(raw)));
-                      updateExperience(exp.id, { name: newName, level: isNaN(num) ? exp.level : num });
+                      await updateExperience(exp.id, { name: newName, level: isNaN(num) ? exp.level : num });
                       refresh();
                     }}>
                       <Pencil className="w-4 h-4 mr-1" /> Edit
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => {
+                    <Button size="sm" variant="destructive" onClick={async () => {
                       if (confirm("Delete this experience?")) {
-                        deleteExperience(exp.id);
+                        await deleteExperience(exp.id);
                         refresh();
                       }
                     }}>
@@ -484,12 +484,12 @@ const Index = () => {
           </div>
           {isAdmin && (
             <div className="mt-6 flex gap-3">
-              <Button onClick={() => {
+              <Button onClick={async () => {
                 const name = prompt("New experience name");
                 if (!name) return;
                 const raw = prompt("Percentage (0-100)", "50");
                 const num = Math.max(0, Math.min(100, Number(raw)));
-                addExperience({ name, level: isNaN(num) ? 50 : num });
+                await addExperience({ name, level: isNaN(num) ? 50 : num });
                 refresh();
               }}>
                 <Plus className="w-4 h-4 mr-2" /> Add Experience
