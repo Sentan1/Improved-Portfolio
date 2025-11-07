@@ -238,6 +238,7 @@ export async function compressImage(
   maxHeight: number = 800, // Aggressively reduced to 800px
   quality: number = 0.6 // Start with 60% quality for smaller files
 ): Promise<string> {
+  console.log(`[compressImage] Starting compression for ${file.name}, max dimensions: ${maxWidth}x${maxHeight}, quality: ${quality}`);
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -245,7 +246,7 @@ export async function compressImage(
       img.onload = () => {
         const originalWidth = img.width;
         const originalHeight = img.height;
-        console.log(`Original image size: ${originalWidth}x${originalHeight}px, ${(file.size / 1024).toFixed(2)} KB`);
+        console.log(`[compressImage] Original image size: ${originalWidth}x${originalHeight}px, file size: ${(file.size / 1024).toFixed(2)} KB`);
         
         // Calculate new dimensions - be more aggressive
         let width = originalWidth;
@@ -324,7 +325,10 @@ export async function compressImage(
 export async function fileToDataUrl(file: File): Promise<string> {
   // Use compression for images to save localStorage space
   if (file.type.startsWith('image/')) {
-    return compressImage(file);
+    console.log(`[fileToDataUrl] Compressing image: ${file.name}, type: ${file.type}, size: ${(file.size / 1024).toFixed(2)} KB`);
+    const result = await compressImage(file);
+    console.log(`[fileToDataUrl] Compression complete, result size: ${(result.length / 1024).toFixed(2)} KB`);
+    return result;
   }
   // For non-image files, use original method
   return new Promise((resolve, reject) => {
