@@ -87,6 +87,22 @@ export async function loadData(): Promise<PortfolioData> {
         }
         return p as Project;
       });
+      
+      // Clean up: Remove any base64 images that are too large (keep only Storage URLs)
+      firebaseData.projects = firebaseData.projects.map((p: any) => {
+        if (p.images && Array.isArray(p.images)) {
+          p.images = p.images.filter((img: string) => {
+            // Only keep HTTP/HTTPS URLs - remove all base64 data URLs
+            return typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'));
+          });
+          // Remove images array if empty
+          if (p.images.length === 0) {
+            delete p.images;
+          }
+        }
+        return p;
+      });
+      
       // Also save to localStorage as backup
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(firebaseData));
@@ -110,6 +126,22 @@ export async function loadData(): Promise<PortfolioData> {
       }
       return p as Project;
     });
+    
+    // Clean up: Remove any base64 images that are too large (keep only Storage URLs)
+    parsed.projects = parsed.projects.map((p: any) => {
+      if (p.images && Array.isArray(p.images)) {
+        p.images = p.images.filter((img: string) => {
+          // Only keep HTTP/HTTPS URLs - remove all base64 data URLs
+          return typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'));
+        });
+        // Remove images array if empty
+        if (p.images.length === 0) {
+          delete p.images;
+        }
+      }
+      return p;
+    });
+    
     return parsed;
   } catch {
     return getDefaultData();
