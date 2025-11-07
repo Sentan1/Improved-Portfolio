@@ -243,6 +243,7 @@ const Index = () => {
           <p className="text-lg md:text-xl text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto">
             Project showcase
           </p>
+          {/* Updated text */}
           
           <Link 
             to="/about"
