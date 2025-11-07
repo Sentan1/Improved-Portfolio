@@ -266,16 +266,15 @@ export async function compressImage(
 
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert to data URL with compression
-        // For PNG, we'll keep it as PNG (to preserve transparency) but resize more aggressively
-        // For JPEG, use quality compression
-        const isPNG = file.type === 'image/png';
-        const outputMimeType = isPNG ? 'image/png' : (file.type || 'image/jpeg');
-        const dataUrl = canvas.toDataURL(outputMimeType, isPNG ? undefined : quality);
+        // Always convert to JPEG for better compression (even PNGs)
+        // This significantly reduces file size
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
         
         // Check if compressed size is reasonable (less than 500KB base64 for better performance)
         // Note: We want images small enough to upload to Firebase Storage quickly
         const maxSize = 500000; // 500KB limit per image
+        console.log(`Initial compressed size: ${(dataUrl.length / 1024).toFixed(2)} KB`);
+        
         if (dataUrl.length > maxSize) {
           // Aggressively reduce size
           let finalUrl = dataUrl;
@@ -283,38 +282,33 @@ export async function compressImage(
           let currentWidth = width;
           let currentHeight = height;
           
-          // For PNG, convert to JPEG for better compression
-          if (isPNG && dataUrl.length > maxSize) {
-            const jpegUrl = canvas.toDataURL('image/jpeg', 0.7);
-            if (jpegUrl.length < dataUrl.length) {
-              finalUrl = jpegUrl;
-            }
-          }
-          
-          // Try reducing quality first (for JPEG)
-          if (!isPNG || finalUrl.startsWith('data:image/jpeg')) {
-            let attempts = 0;
-            while (finalUrl.length > maxSize && attempts < 5 && currentQuality > 0.3) {
-              currentQuality = currentQuality * 0.8;
-              finalUrl = canvas.toDataURL('image/jpeg', currentQuality);
-              attempts++;
-            }
+          // Try reducing quality first
+          let attempts = 0;
+          while (finalUrl.length > maxSize && attempts < 8 && currentQuality > 0.4) {
+            currentQuality = Math.max(0.4, currentQuality * 0.75);
+            finalUrl = canvas.toDataURL('image/jpeg', currentQuality);
+            attempts++;
+            console.log(`Quality reduction attempt ${attempts}: ${(finalUrl.length / 1024).toFixed(2)} KB at quality ${currentQuality.toFixed(2)}`);
           }
           
           // If still too large, reduce dimensions aggressively
           if (finalUrl.length > maxSize) {
-            let ratio = 0.7;
-            while (finalUrl.length > maxSize && ratio > 0.3) {
+            let ratio = 0.6;
+            let dimensionAttempts = 0;
+            while (finalUrl.length > maxSize && ratio > 0.2 && dimensionAttempts < 5) {
               currentWidth = Math.floor(width * ratio);
               currentHeight = Math.floor(height * ratio);
               canvas.width = currentWidth;
               canvas.height = currentHeight;
               ctx.drawImage(img, 0, 0, currentWidth, currentHeight);
-              finalUrl = canvas.toDataURL('image/jpeg', 0.6);
+              finalUrl = canvas.toDataURL('image/jpeg', 0.5);
               ratio -= 0.1;
+              dimensionAttempts++;
+              console.log(`Dimension reduction attempt ${dimensionAttempts}: ${(finalUrl.length / 1024).toFixed(2)} KB at ${currentWidth}x${currentHeight}`);
             }
           }
           
+          console.log(`Final compressed size: ${(finalUrl.length / 1024).toFixed(2)} KB`);
           resolve(finalUrl);
         } else {
           resolve(dataUrl);

@@ -220,11 +220,33 @@ export async function saveDataToFirebase(data: PortfolioData): Promise<void> {
       });
     }
     
+    // Final validation - log what we're about to save
+    const dataSize = JSON.stringify(cleanedData).length;
+    console.log(`Saving to Firebase, data size: ${(dataSize / 1024).toFixed(2)} KB`);
+    
+    // Check for any remaining issues
+    if (cleanedData.projects) {
+      cleanedData.projects.forEach((p: any, idx: number) => {
+        if (p.images) {
+          p.images.forEach((img: any, imgIdx: number) => {
+            if (typeof img !== 'string' || (!img.startsWith('http://') && !img.startsWith('https://'))) {
+              console.warn(`Project ${idx} image ${imgIdx} is not a valid URL:`, typeof img, img?.substring?.(0, 50));
+            }
+          });
+        }
+      });
+    }
+    
     await setDoc(docRef, cleanedData, { merge: true });
     console.log("Saved data to Firebase");
   } catch (error: any) {
     console.error("Error saving to Firebase:", error);
     console.error("Error details:", error.message);
+    console.error("Error code:", error.code);
+    // Log a sample of the data to help debug
+    if (cleanedData.projects && cleanedData.projects.length > 0) {
+      console.error("Sample project data:", JSON.stringify(cleanedData.projects[0], null, 2).substring(0, 500));
+    }
     throw error;
   }
 }

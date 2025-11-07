@@ -81,8 +81,31 @@ const AdminAddProject = () => {
             })
           );
           
-          // Create project first to get ID, then upload images
-          const tempProject = await addProject({
+          // Upload to Firebase Storage FIRST, then create project with URLs
+          console.log("Uploading images to Firebase Storage...");
+          const tempProjectId = `proj_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+          
+          images = await Promise.all(
+            compressedImages.map(async (dataUrl, index) => {
+              try {
+                // Check image size before uploading
+                const imgSizeKB = (dataUrl.length / 1024).toFixed(2);
+                if (dataUrl.length > 1000000) { // 1MB
+                  console.warn(`Image ${index + 1} is still large (${imgSizeKB} KB), but proceeding with upload`);
+                }
+                const storageUrl = await uploadImageToFirebase(dataUrl, tempProjectId, index);
+                console.log(`Uploaded image ${index + 1} to Storage: ${storageUrl.substring(0, 50)}...`);
+                return storageUrl;
+              } catch (err) {
+                console.error("Error uploading to Storage:", err);
+                throw new Error(`Failed to upload image ${index + 1} to Firebase Storage. Please check that Storage is enabled.`);
+              }
+            })
+          );
+          
+          // Now create project with Storage URLs (not base64)
+          console.log("Creating project with Storage image URLs...");
+          await addProject({
             title: title.trim(),
             description: description.trim(),
             category: category.trim() || undefined,
@@ -91,29 +114,8 @@ const AdminAddProject = () => {
               .split(",")
               .map((t) => t.trim())
               .filter(Boolean),
-            images: undefined, // Will update after uploading
+            images: images, // These are now Storage URLs, not base64
           });
-          
-          // Upload to Firebase Storage and get URLs
-          console.log("Uploading images to Firebase Storage...");
-          images = await Promise.all(
-            compressedImages.map(async (dataUrl, index) => {
-              try {
-                const storageUrl = await uploadImageToFirebase(dataUrl, tempProject.id, index);
-                console.log(`Uploaded image ${index + 1} to Storage: ${storageUrl.substring(0, 50)}...`);
-                return storageUrl;
-              } catch (err) {
-                console.error("Error uploading to Storage:", err);
-                // Don't use data URL as fallback - Storage must work
-                // Throw error so user knows Storage isn't working
-                throw new Error(`Failed to upload image ${index + 1} to Firebase Storage. Please check that Storage is enabled.`);
-              }
-            })
-          );
-          
-          // Update project with image URLs
-          const { updateProject } = await import("@/lib/storage");
-          await updateProject(tempProject.id, { images });
           
           setCompressing(false);
         } catch (err) {
