@@ -400,7 +400,24 @@ export async function setProfilePhoto(photoDataUrl: string): Promise<void> {
 export async function getAboutContent(): Promise<AboutContent> {
   const data = await loadData();
   if (data.aboutContent) {
-    return data.aboutContent;
+    // Clean up skills array - ensure it's valid
+    const cleaned = { ...data.aboutContent };
+    if (cleaned.skills) {
+      if (Array.isArray(cleaned.skills)) {
+        // Filter out invalid skills
+        cleaned.skills = cleaned.skills
+          .filter(skill => skill && typeof skill === 'string' && skill.trim().length > 0)
+          .map(skill => skill.trim());
+        // Remove if empty
+        if (cleaned.skills.length === 0) {
+          cleaned.skills = undefined;
+        }
+      } else {
+        // If skills is not an array, remove it
+        cleaned.skills = undefined;
+      }
+    }
+    return cleaned;
   }
   // Return default content
   return {
@@ -414,7 +431,24 @@ export async function getAboutContent(): Promise<AboutContent> {
 export function getAboutContentSync(): AboutContent {
   const data = loadDataSync();
   if (data.aboutContent) {
-    return data.aboutContent;
+    // Clean up skills array - ensure it's valid
+    const cleaned = { ...data.aboutContent };
+    if (cleaned.skills) {
+      if (Array.isArray(cleaned.skills)) {
+        // Filter out invalid skills
+        cleaned.skills = cleaned.skills
+          .filter(skill => skill && typeof skill === 'string' && skill.trim().length > 0)
+          .map(skill => skill.trim());
+        // Remove if empty
+        if (cleaned.skills.length === 0) {
+          cleaned.skills = undefined;
+        }
+      } else {
+        // If skills is not an array, remove it
+        cleaned.skills = undefined;
+      }
+    }
+    return cleaned;
   }
   return {
     paragraph1: "My name is Adrian Tan. I'm currently studying an Associate Degree in Information Technology. I enjoy programming digital experiences that blend functionality with aesthetics.",

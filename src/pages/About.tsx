@@ -24,10 +24,21 @@ const About = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      const photo = await getProfilePhoto();
-      const content = await getAboutContent();
-      setProfilePhotoState(photo);
-      setAboutContentState(content);
+      try {
+        const photo = await getProfilePhoto();
+        const content = await getAboutContent();
+        setProfilePhotoState(photo);
+        setAboutContentState(content);
+      } catch (error) {
+        console.error("Error loading about content:", error);
+        // Use default content if loading fails
+        setAboutContentState({
+          paragraph1: "My name is Adrian Tan. I'm currently studying an Associate Degree in Information Technology. I enjoy programming digital experiences that blend functionality with aesthetics.",
+          paragraph2: "I'm an early-stage developer with basic knowledge of HTML, Java, CSS, TypeScript, JavaScript, React, and Python. I continue to grow my skills through personal projects and challenges.",
+          paragraph3: "Aside from programming, my other hobbies include 3d Modelling, Gaming, Watching Anime, and Badminton",
+          skills: ['Java', 'UI/UX Design', 'Problem Solving']
+        });
+      }
     };
     loadData();
     setIsAdminMode(isAdmin());
@@ -46,8 +57,15 @@ const About = () => {
       paragraph1: editPara1.trim(),
       paragraph2: editPara2.trim(),
       paragraph3: editPara3.trim(),
-      skills: editSkills.split(",").map(s => s.trim()).filter(Boolean),
+      skills: editSkills
+        .split(",")
+        .map(s => s.trim())
+        .filter(s => s && s.length > 0), // Filter out empty strings
     };
+    // If no skills, set to undefined instead of empty array
+    if (updated.skills.length === 0) {
+      updated.skills = undefined;
+    }
     await setAboutContent(updated);
     setAboutContentState(updated);
     setEditDialogOpen(false);
@@ -204,15 +222,17 @@ const About = () => {
                 </p>
               )}
               
-              {aboutContent.skills && aboutContent.skills.length > 0 && (
+              {aboutContent.skills && Array.isArray(aboutContent.skills) && aboutContent.skills.length > 0 && (
                 <div className="pt-4">
                   <h3 className="text-lg font-semibold text-slate-200 mb-3">Skills & Expertise</h3>
                   <div className="flex flex-wrap gap-2">
-                    {aboutContent.skills.map((skill, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-slate-700 rounded-full text-slate-300 text-sm font-medium">
-                        {skill}
-                      </span>
-                    ))}
+                    {aboutContent.skills
+                      .filter(skill => skill && typeof skill === 'string' && skill.trim().length > 0)
+                      .map((skill, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-slate-700 rounded-full text-slate-300 text-sm font-medium">
+                          {skill}
+                        </span>
+                      ))}
                   </div>
                 </div>
               )}

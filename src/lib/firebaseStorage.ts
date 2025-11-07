@@ -11,6 +11,7 @@ import {
 import { 
   ref, 
   uploadString, 
+  uploadBytes,
   getDownloadURL, 
   deleteObject 
 } from "firebase/storage";
@@ -251,6 +252,19 @@ export async function saveDataToFirebase(data: PortfolioData): Promise<void> {
   }
 }
 
+// Convert data URL to Blob
+function dataURLtoBlob(dataurl: string): Blob {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
 // Upload image to Firebase Storage and return URL
 export async function uploadImageToFirebase(
   imageDataUrl: string, 
@@ -264,12 +278,35 @@ export async function uploadImageToFirebase(
 
   try {
     const imageRef = ref(storage, `projects/${projectId}/image_${imageIndex}`);
-    await uploadString(imageRef, imageDataUrl, "data_url");
-    const downloadURL = await getDownloadURL(imageRef);
-    console.log(`Uploaded image ${imageIndex} for project ${projectId}`);
-    return downloadURL;
-  } catch (error) {
+    
+    // Try using uploadBytes with Blob first (better CORS handling)
+    try {
+      const blob = dataURLtoBlob(imageDataUrl);
+      await uploadBytes(imageRef, blob, {
+        contentType: blob.type,
+        cacheControl: 'public, max-age=31536000', // Cache for 1 year
+      });
+      const downloadURL = await getDownloadURL(imageRef);
+      console.log(`Uploaded image ${imageIndex} for project ${projectId} using uploadBytes`);
+      return downloadURL;
+    } catch (blobError) {
+      // Fallback to uploadString if uploadBytes fails
+      console.log(`uploadBytes failed, trying uploadString:`, blobError);
+      await uploadString(imageRef, imageDataUrl, "data_url");
+      const downloadURL = await getDownloadURL(imageRef);
+      console.log(`Uploaded image ${imageIndex} for project ${projectId} using uploadString`);
+      return downloadURL;
+    }
+  } catch (error: any) {
     console.error("Error uploading image to Firebase:", error);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    
+    // If it's a CORS error, provide helpful message
+    if (error.message?.includes('CORS') || error.code === 'storage/unauthorized') {
+      throw new Error(`CORS error: Firebase Storage needs to allow uploads from sentan1.github.io. Please check Storage security rules and CORS configuration.`);
+    }
+    
     // Fallback to data URL
     return imageDataUrl;
   }

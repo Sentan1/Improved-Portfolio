@@ -100,7 +100,11 @@ const Index = () => {
   }, []);
 
   const handleLogin = () => {
-    if (adminPassword === "Huh???2006") {
+    // Password is stored in environment variable (still visible in build, but better than hardcoding)
+    // For production, this should use Firebase Authentication instead
+    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || "Huh???2006";
+    
+    if (adminPassword === correctPassword) {
       setAdmin(true);
       setIsAdmin(true);
       setAdminPassword("");

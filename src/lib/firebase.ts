@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 // Your Firebase config
 // Uses environment variables if available (local dev), otherwise falls back to production values
@@ -22,6 +23,9 @@ export const db = getFirestore(app);
 
 // Initialize Firebase Storage (for images)
 export const storage = getStorage(app);
+
+// Initialize Firebase Authentication
+export const auth = getAuth(app);
 
 export default app;
 
