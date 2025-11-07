@@ -234,9 +234,9 @@ export async function deleteExperience(id: string): Promise<void> {
  */
 export async function compressImage(
   file: File,
-  maxWidth: number = 1920, // Increased to 1920px (Full HD width)
-  maxHeight: number = 1920, // Increased to 1920px
-  quality: number = 0.85 // Increased to 85% quality
+  maxWidth: number = 1200, // Reduced to 1200px for better compression
+  maxHeight: number = 1200, // Reduced to 1200px
+  quality: number = 0.7 // Reduced to 70% quality for smaller files
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -273,32 +273,46 @@ export async function compressImage(
         const outputMimeType = isPNG ? 'image/png' : (file.type || 'image/jpeg');
         const dataUrl = canvas.toDataURL(outputMimeType, isPNG ? undefined : quality);
         
-        // Check if compressed size is reasonable (less than 1MB base64 - allows larger images)
-        // Note: localStorage typically has 5-10MB total limit, so be mindful of total storage
-        if (dataUrl.length > 1000000) { // 1MB limit per image
-          // Try with lower quality or smaller dimensions
+        // Check if compressed size is reasonable (less than 500KB base64 for better performance)
+        // Note: We want images small enough to upload to Firebase Storage quickly
+        const maxSize = 500000; // 500KB limit per image
+        if (dataUrl.length > maxSize) {
+          // Aggressively reduce size
           let finalUrl = dataUrl;
           let currentQuality = quality;
           let currentWidth = width;
           let currentHeight = height;
           
-          // Try reducing quality first (only for JPEG)
-          if (!isPNG) {
-            for (let i = 0; i < 2 && finalUrl.length > 1000000; i++) {
-              currentQuality = currentQuality * 0.85; // Gentle reduction
-              finalUrl = canvas.toDataURL(outputMimeType, currentQuality);
+          // For PNG, convert to JPEG for better compression
+          if (isPNG && dataUrl.length > maxSize) {
+            const jpegUrl = canvas.toDataURL('image/jpeg', 0.7);
+            if (jpegUrl.length < dataUrl.length) {
+              finalUrl = jpegUrl;
             }
           }
           
-          // If still too large, reduce dimensions (works for both PNG and JPEG)
-          if (finalUrl.length > 1000000) {
-            const smallerRatio = 0.8; // Less aggressive reduction
-            currentWidth = width * smallerRatio;
-            currentHeight = height * smallerRatio;
-            canvas.width = currentWidth;
-            canvas.height = currentHeight;
-            ctx.drawImage(img, 0, 0, currentWidth, currentHeight);
-            finalUrl = canvas.toDataURL(outputMimeType, isPNG ? undefined : 0.75); // Higher quality fallback
+          // Try reducing quality first (for JPEG)
+          if (!isPNG || finalUrl.startsWith('data:image/jpeg')) {
+            let attempts = 0;
+            while (finalUrl.length > maxSize && attempts < 5 && currentQuality > 0.3) {
+              currentQuality = currentQuality * 0.8;
+              finalUrl = canvas.toDataURL('image/jpeg', currentQuality);
+              attempts++;
+            }
+          }
+          
+          // If still too large, reduce dimensions aggressively
+          if (finalUrl.length > maxSize) {
+            let ratio = 0.7;
+            while (finalUrl.length > maxSize && ratio > 0.3) {
+              currentWidth = Math.floor(width * ratio);
+              currentHeight = Math.floor(height * ratio);
+              canvas.width = currentWidth;
+              canvas.height = currentHeight;
+              ctx.drawImage(img, 0, 0, currentWidth, currentHeight);
+              finalUrl = canvas.toDataURL('image/jpeg', 0.6);
+              ratio -= 0.1;
+            }
           }
           
           resolve(finalUrl);

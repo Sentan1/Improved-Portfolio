@@ -87,6 +87,60 @@ export async function loadDataFromFirebase(): Promise<PortfolioData | null> {
   }
 }
 
+// Deep clean data for Firestore - removes undefined, null arrays, and large base64 images
+function deepCleanForFirestore(data: any): any {
+  if (data === null || data === undefined) {
+    return null; // Firestore allows null but not undefined
+  }
+  
+  if (typeof data !== 'object') {
+    return data;
+  }
+  
+  if (Array.isArray(data)) {
+    const cleaned = data
+      .map(item => deepCleanForFirestore(item))
+      .filter(item => item !== undefined && item !== null);
+    return cleaned.length > 0 ? cleaned : undefined; // Remove empty arrays
+  }
+  
+  const cleaned: any = {};
+  for (const key in data) {
+    if (data.hasOwnProperty(key)) {
+      const value = data[key];
+      
+      // Skip undefined
+      if (value === undefined) {
+        continue;
+      }
+      
+      // Handle images array - remove base64 data URLs, keep only Storage URLs
+      if (key === 'images' && Array.isArray(value)) {
+        const imageUrls = value
+          .filter((img: string) => {
+            // Keep only Firebase Storage URLs (http/https) or very small previews
+            if (typeof img === 'string') {
+              return img.startsWith('http') || (img.startsWith('data:') && img.length < 50000);
+            }
+            return false;
+          })
+          .map((img: string) => deepCleanForFirestore(img));
+        if (imageUrls.length > 0) {
+          cleaned[key] = imageUrls;
+        }
+        continue;
+      }
+      
+      const cleanedValue = deepCleanForFirestore(value);
+      if (cleanedValue !== undefined) {
+        cleaned[key] = cleanedValue;
+      }
+    }
+  }
+  
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+}
+
 // Save portfolio data to Firestore
 export async function saveDataToFirebase(data: PortfolioData): Promise<void> {
   if (!isFirebaseConfigured()) {
@@ -97,43 +151,38 @@ export async function saveDataToFirebase(data: PortfolioData): Promise<void> {
   const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
   
   try {
-    // Always use JSON parse/stringify to remove undefined and handle large data
-    // This also ensures we don't exceed Firestore document size limits
-    const cleanedData = JSON.parse(JSON.stringify(data));
+    // Deep clean the data - remove undefined, clean arrays, remove large base64 images
+    let cleanedData = deepCleanForFirestore(data);
     
-    // Firestore has a 1MB limit per document, so we need to be careful with images
-    // Images should already be uploaded to Storage, so we should only have URLs here
+    // Double pass with JSON to ensure no undefined values
+    cleanedData = JSON.parse(JSON.stringify(cleanedData));
+    
+    // Final check: remove any base64 images that are too large
+    if (cleanedData.projects && Array.isArray(cleanedData.projects)) {
+      cleanedData.projects = cleanedData.projects.map((p: any) => {
+        if (p.images && Array.isArray(p.images)) {
+          p.images = p.images.filter((img: string) => {
+            // Only keep Storage URLs or very small data URLs
+            return typeof img === 'string' && (
+              img.startsWith('http') || 
+              (img.startsWith('data:') && img.length < 50000)
+            );
+          });
+          // Remove images array if empty
+          if (p.images.length === 0) {
+            delete p.images;
+          }
+        }
+        return p;
+      });
+    }
+    
     await setDoc(docRef, cleanedData, { merge: true });
     console.log("Saved data to Firebase");
   } catch (error: any) {
     console.error("Error saving to Firebase:", error);
-    
-    // If error is about document size, try to remove large image data URLs
-    if (error.message && (error.message.includes("size") || error.message.includes("larger"))) {
-      console.warn("Document too large, attempting to clean image data...");
-      try {
-        const cleaned = JSON.parse(JSON.stringify(data));
-        // Remove any base64 data URLs that are too large (keep only Storage URLs)
-        if (cleaned.projects) {
-          cleaned.projects = cleaned.projects.map((p: any) => {
-            if (p.images && Array.isArray(p.images)) {
-              p.images = p.images.filter((img: string) => {
-                // Keep only Firebase Storage URLs or small data URLs
-                return img.startsWith('http') || img.length < 100000; // Keep URLs or small previews
-              });
-            }
-            return p;
-          });
-        }
-        await setDoc(docRef, cleaned, { merge: true });
-        console.log("Saved data to Firebase (after cleaning large images)");
-      } catch (fallbackError) {
-        console.error("Fallback save also failed:", fallbackError);
-        throw error;
-      }
-    } else {
-      throw error;
-    }
+    console.error("Error details:", error.message);
+    throw error;
   }
 }
 
