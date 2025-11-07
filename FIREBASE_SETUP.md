@@ -31,21 +31,21 @@ This guide will help you set up Firebase so your portfolio changes are visible t
 ### 4. Enable Firestore Database
 1. In Firebase Console, go to **Build** > **Firestore Database**
 2. Click "Create database"
-3. Select **"Start in test mode"** (for now - we'll secure it later)
+3. Select **"Start in test mode"** (we'll set up proper rules in step 7)
 4. Choose a location (closest to you)
 5. Click "Enable"
 
 ### 5. Enable Storage
 1. In Firebase Console, go to **Build** > **Storage**
 2. Click "Get started"
-3. Select **"Start in test mode"**
+3. Select **"Start in test mode"** (we'll set up proper rules in step 8)
 4. Use the default location
 5. Click "Done"
 
 ### 6. Add Environment Variables
 1. In your project root, create a file named `.env` (not `.env.example`)
-2. Copy the contents from `.env.example`
-3. Replace the values with your Firebase config:
+2. Copy the template from `.env.example` (if it exists) or use this format:
+3. Replace the values with your Firebase config from step 3:
 
 ```env
 VITE_FIREBASE_API_KEY=AIzaSyC...your_actual_key
@@ -56,46 +56,58 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
 VITE_FIREBASE_APP_ID=1:123456789:web:abc123
 ```
 
-### 7. Secure Your Database (Important!)
+**Important:** 
+- The `.env` file is already in `.gitignore` so it won't be committed to git
+- After creating `.env`, **restart your dev server** (`npm run dev`)
+- All variables must start with `VITE_` for Vite to expose them
+
+### 7. Set Up Firestore Security Rules (IMPORTANT!)
+**Do this now!** Test mode expires after 30 days. Set up these rules immediately:
+
 1. Go to **Firestore Database** > **Rules**
-2. Replace the rules with:
+2. Replace the rules with these (allows public reads and writes for your portfolio):
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Allow read access to everyone
+    // Allow write access to everyone (for personal portfolio)
     match /portfolio/{document=**} {
-      allow read: if true;
-      // Only allow writes with admin password (we'll add this later)
-      allow write: if request.auth != null || 
-        request.resource.data.adminPassword == "Huh???2006";
+      allow read, write: if true;
     }
   }
 }
 ```
 
+**Security Note:** These rules allow anyone to edit your portfolio. For better security:
+- Set up Firebase Authentication
+- Or restrict writes to authenticated users only
+- Or use Firebase App Check to limit access
+
 3. Click "Publish"
 
-### 8. Secure Storage (Important!)
+### 8. Set Up Storage Security Rules (IMPORTANT!)
+**Do this now!** Test mode expires after 30 days. Set up these rules immediately:
+
 1. Go to **Storage** > **Rules**
-2. Replace the rules with:
+2. Replace the rules with these (allows public reads and writes):
 
 ```javascript
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /projects/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if true;
     }
     match /profile/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
 ```
+
+**Security Note:** These rules allow anyone to upload/delete images. For better security, set up Firebase Authentication.
 
 3. Click "Publish"
 
@@ -139,4 +151,5 @@ Once Firebase is set up:
 2. Data persists even if you clear browser cache
 3. Works across all devices and browsers
 4. Much more storage than localStorage!
+
 

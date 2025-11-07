@@ -2,15 +2,16 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// Your Firebase config - you'll need to replace these with your actual values
-// Get these from: https://console.firebase.google.com/
+// Your Firebase config
+// Uses environment variables if available (local dev), otherwise falls back to production values
+// Note: Firebase config values are public - security comes from Firebase Security Rules
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_API_KEY",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "YOUR_AUTH_DOMAIN",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "YOUR_PROJECT_ID",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "YOUR_STORAGE_BUCKET",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_MESSAGING_SENDER_ID",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "YOUR_APP_ID"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBHHUAqIR7erJxg_OtQDRjbQD6B-owl4d8",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "portfolio-db982.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "portfolio-db982",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "portfolio-db982.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "137456975079",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:137456975079:web:f3a83438c07125bea2b642"
 };
 
 // Initialize Firebase
@@ -23,4 +24,5 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 export default app;
+
 
