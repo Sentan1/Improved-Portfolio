@@ -34,21 +34,32 @@ function removeUndefined<T>(obj: T): T {
     return obj;
   }
   
-  if (Array.isArray(obj)) {
-    return obj.map(item => removeUndefined(item)) as T;
+  // Handle primitives and special types
+  if (typeof obj !== 'object') {
+    return obj;
   }
   
-  if (typeof obj === 'object') {
-    const cleaned: any = {};
-    for (const [key, value] of Object.entries(obj)) {
+  // Handle Date objects
+  if (obj instanceof Date) {
+    return obj;
+  }
+  
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefined(item)).filter(item => item !== undefined) as T;
+  }
+  
+  // Handle objects
+  const cleaned: any = {};
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const value = (obj as any)[key];
       if (value !== undefined) {
         cleaned[key] = removeUndefined(value);
       }
     }
-    return cleaned as T;
   }
-  
-  return obj;
+  return cleaned as T;
 }
 
 // Load portfolio data from Firestore
@@ -86,12 +97,32 @@ export async function saveDataToFirebase(data: PortfolioData): Promise<void> {
   try {
     // Remove undefined values (Firestore doesn't allow undefined)
     const cleanedData = removeUndefined(data);
-    const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
-    await setDoc(docRef, cleanedData, { merge: true });
+    
+    // Double-check for any remaining undefined values
+    const jsonString = JSON.stringify(cleanedData);
+    if (jsonString.includes('undefined')) {
+      console.warn("Warning: Found undefined in cleaned data, attempting deeper clean");
+      // Use JSON parse/stringify to remove undefined
+      const doubleCleaned = JSON.parse(JSON.stringify(cleanedData));
+      const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
+      await setDoc(docRef, doubleCleaned, { merge: true });
+    } else {
+      const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
+      await setDoc(docRef, cleanedData, { merge: true });
+    }
     console.log("Saved data to Firebase");
   } catch (error) {
     console.error("Error saving to Firebase:", error);
-    throw error;
+    // Try one more time with JSON parse/stringify as fallback
+    try {
+      const fallbackData = JSON.parse(JSON.stringify(data));
+      const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
+      await setDoc(docRef, fallbackData, { merge: true });
+      console.log("Saved data to Firebase (using fallback method)");
+    } catch (fallbackError) {
+      console.error("Fallback save also failed:", fallbackError);
+      throw error;
+    }
   }
 }
 
