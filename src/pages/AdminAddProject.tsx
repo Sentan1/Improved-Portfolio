@@ -65,18 +65,36 @@ const AdminAddProject = () => {
         setCompressing(true);
         try {
           const slice = imageFiles.slice(0, 5);
+          
+          // Check original file sizes first - warn if too large
+          for (const file of slice) {
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            if (file.size > 5 * 1024 * 1024) { // 5MB
+              console.warn(`Warning: ${file.name} is ${fileSizeMB} MB. Compression may take a while.`);
+            }
+          }
+          
           // Compress images first
           const compressedImages = await Promise.all(
             slice.map(async (f, index) => {
               try {
-                console.log(`Compressing image ${index + 1}/${slice.length}: ${f.name}`);
+                console.log(`Compressing image ${index + 1}/${slice.length}: ${f.name} (${(f.size / 1024).toFixed(2)} KB)`);
                 const compressed = await fileToDataUrl(f);
                 const sizeKB = (compressed.length / 1024).toFixed(2);
                 console.log(`Compressed ${f.name}: ${sizeKB} KB`);
+                
+                // Check if compression actually worked
+                if (compressed.length > 500000) { // 500KB limit
+                  throw new Error(`Image ${index + 1} (${f.name}) is still too large after compression (${sizeKB} KB). Maximum allowed is 500KB. Please use a smaller image or compress it externally first.`);
+                }
+                
                 return compressed;
               } catch (err) {
                 console.error("Error processing image:", f.name, err);
-                throw new Error(`Failed to process image: ${f.name}`);
+                if (err instanceof Error && err.message.includes("too large")) {
+                  throw err; // Re-throw size errors
+                }
+                throw new Error(`Failed to process image: ${f.name}. ${err instanceof Error ? err.message : 'Unknown error'}`);
               }
             })
           );
@@ -88,11 +106,6 @@ const AdminAddProject = () => {
           images = await Promise.all(
             compressedImages.map(async (dataUrl, index) => {
               try {
-                // Check image size before uploading
-                const imgSizeKB = (dataUrl.length / 1024).toFixed(2);
-                if (dataUrl.length > 1000000) { // 1MB
-                  console.warn(`Image ${index + 1} is still large (${imgSizeKB} KB), but proceeding with upload`);
-                }
                 const storageUrl = await uploadImageToFirebase(dataUrl, tempProjectId, index);
                 console.log(`Uploaded image ${index + 1} to Storage: ${storageUrl.substring(0, 50)}...`);
                 return storageUrl;
