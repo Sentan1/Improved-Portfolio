@@ -9,14 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { loadData, saveData, isAdmin as loadIsAdmin, setAdmin, deleteProject, updateProject, addExperience, updateExperience, deleteExperience, type Project, type Experience } from "@/lib/storage";
+import { login, logout, onAuthChange, isAuthenticated, getCurrentUser } from "@/lib/auth";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
-  const [isAdmin, setIsAdmin] = useState(loadIsAdmin());
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [editProjectOpen, setEditProjectOpen] = useState(false);
@@ -59,6 +63,19 @@ const Index = () => {
 
   useEffect(() => {
     refresh();
+    
+    // Listen for Firebase auth state changes
+    const unsubscribe = onAuthChange((user) => {
+      if (user) {
+        setIsAdmin(true);
+        setAdmin(true);
+      } else {
+        setIsAdmin(false);
+        setAdmin(false);
+      }
+    });
+    
+    return () => unsubscribe();
   }, []);
 
   // Refresh when location changes (e.g., returning from add project page)
@@ -99,24 +116,37 @@ const Index = () => {
     };
   }, []);
 
-  const handleLogin = () => {
-    // Password is stored in environment variable (still visible in build, but better than hardcoding)
-    // For production, this should use Firebase Authentication instead
-    const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || "Huh???2006";
+  const handleLogin = async () => {
+    if (!adminEmail || !adminPassword) {
+      setLoginError("Please enter both email and password");
+      return;
+    }
     
-    if (adminPassword === correctPassword) {
-      setAdmin(true);
-      setIsAdmin(true);
+    setLoggingIn(true);
+    setLoginError("");
+    
+    try {
+      // Use Firebase Authentication - password is stored server-side, not in code!
+      await login(adminEmail, adminPassword);
+      setAdminEmail("");
       setAdminPassword("");
       setAuthOpen(false);
-    } else {
-      alert("Incorrect password");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      setLoginError(error.message || "Invalid email or password");
+    } finally {
+      setLoggingIn(false);
     }
   };
 
-  const handleLogout = () => {
-    setAdmin(false);
-    setIsAdmin(false);
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setAdmin(false);
+      setIsAdmin(false);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (
@@ -162,14 +192,40 @@ const Index = () => {
       <Dialog open={authOpen} onOpenChange={setAuthOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enter admin password or continue as guest</DialogTitle>
+            <DialogTitle>Admin Login</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Label htmlFor="admin-pass">Password</Label>
-            <Input id="admin-pass" type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} />
+            <div className="space-y-2">
+              <Label htmlFor="admin-email">Email</Label>
+              <Input 
+                id="admin-email" 
+                type="email" 
+                value={adminEmail} 
+                onChange={(e) => setAdminEmail(e.target.value)}
+                placeholder="your-email@example.com"
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-pass">Password</Label>
+              <Input 
+                id="admin-pass" 
+                type="password" 
+                value={adminPassword} 
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              />
+            </div>
+            {loginError && (
+              <div className="text-red-400 text-sm bg-red-900/20 p-2 rounded">
+                {loginError}
+              </div>
+            )}
             <div className="flex gap-3 pt-2">
-              <Button onClick={handleLogin}>Unlock Admin</Button>
-              <Button variant="secondary" onClick={() => setAuthOpen(false)}>View as Guest</Button>
+              <Button onClick={handleLogin} disabled={loggingIn}>
+                {loggingIn ? "Logging in..." : "Login"}
+              </Button>
+              <Button variant="secondary" onClick={() => setAuthOpen(false)}>Cancel</Button>
             </div>
           </div>
         </DialogContent>

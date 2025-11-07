@@ -1,3 +1,5 @@
+import { isAuthenticated } from "./auth";
+
 export type Project = {
   id: string;
   title: string;
@@ -202,15 +204,33 @@ export async function saveData(data: PortfolioData): Promise<void> {
 }
 
 export function isAdmin(): boolean {
+  // Use Firebase Authentication - password is stored server-side!
+  if (typeof window === "undefined") return false;
+  
   try {
-    return localStorage.getItem(ADMIN_KEY) === "true";
+    // Check Firebase Auth (password is NOT in code!)
+    return isAuthenticated();
   } catch {
-    return false;
+    // Fallback to localStorage (for compatibility during transition)
+    try {
+      return localStorage.getItem(ADMIN_KEY) === "true";
+    } catch {
+      return false;
+    }
   }
 }
 
 export function setAdmin(enabled: boolean): void {
-  localStorage.setItem(ADMIN_KEY, enabled ? "true" : "false");
+  // This function is kept for compatibility, but Firebase Auth handles this now
+  if (typeof window === "undefined") return;
+  if (!enabled) {
+    // Only clear localStorage if logging out
+    try {
+      localStorage.removeItem(ADMIN_KEY);
+    } catch {
+      // Ignore
+    }
+  }
 }
 
 export async function addProject(project: Omit<Project, "id">): Promise<Project> {
