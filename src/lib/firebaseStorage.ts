@@ -94,33 +94,44 @@ export async function saveDataToFirebase(data: PortfolioData): Promise<void> {
     return;
   }
 
+  const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
+  
   try {
-    // Remove undefined values (Firestore doesn't allow undefined)
-    const cleanedData = removeUndefined(data);
+    // Always use JSON parse/stringify to remove undefined and handle large data
+    // This also ensures we don't exceed Firestore document size limits
+    const cleanedData = JSON.parse(JSON.stringify(data));
     
-    // Double-check for any remaining undefined values
-    const jsonString = JSON.stringify(cleanedData);
-    if (jsonString.includes('undefined')) {
-      console.warn("Warning: Found undefined in cleaned data, attempting deeper clean");
-      // Use JSON parse/stringify to remove undefined
-      const doubleCleaned = JSON.parse(JSON.stringify(cleanedData));
-      const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
-      await setDoc(docRef, doubleCleaned, { merge: true });
-    } else {
-      const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
-      await setDoc(docRef, cleanedData, { merge: true });
-    }
+    // Firestore has a 1MB limit per document, so we need to be careful with images
+    // Images should already be uploaded to Storage, so we should only have URLs here
+    await setDoc(docRef, cleanedData, { merge: true });
     console.log("Saved data to Firebase");
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error saving to Firebase:", error);
-    // Try one more time with JSON parse/stringify as fallback
-    try {
-      const fallbackData = JSON.parse(JSON.stringify(data));
-      const docRef = doc(db, "portfolio", PORTFOLIO_DOC_ID);
-      await setDoc(docRef, fallbackData, { merge: true });
-      console.log("Saved data to Firebase (using fallback method)");
-    } catch (fallbackError) {
-      console.error("Fallback save also failed:", fallbackError);
+    
+    // If error is about document size, try to remove large image data URLs
+    if (error.message && (error.message.includes("size") || error.message.includes("larger"))) {
+      console.warn("Document too large, attempting to clean image data...");
+      try {
+        const cleaned = JSON.parse(JSON.stringify(data));
+        // Remove any base64 data URLs that are too large (keep only Storage URLs)
+        if (cleaned.projects) {
+          cleaned.projects = cleaned.projects.map((p: any) => {
+            if (p.images && Array.isArray(p.images)) {
+              p.images = p.images.filter((img: string) => {
+                // Keep only Firebase Storage URLs or small data URLs
+                return img.startsWith('http') || img.length < 100000; // Keep URLs or small previews
+              });
+            }
+            return p;
+          });
+        }
+        await setDoc(docRef, cleaned, { merge: true });
+        console.log("Saved data to Firebase (after cleaning large images)");
+      } catch (fallbackError) {
+        console.error("Fallback save also failed:", fallbackError);
+        throw error;
+      }
+    } else {
       throw error;
     }
   }

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { addProject, fileToDataUrl, isAdmin } from "@/lib/storage";
+import { uploadImageToFirebase } from "@/lib/firebaseStorage";
 
 const AdminAddProject = () => {
   const navigate = useNavigate();
@@ -64,7 +65,8 @@ const AdminAddProject = () => {
         setCompressing(true);
         try {
           const slice = imageFiles.slice(0, 5);
-          images = await Promise.all(
+          // Compress images first
+          const compressedImages = await Promise.all(
             slice.map(async (f, index) => {
               try {
                 console.log(`Compressing image ${index + 1}/${slice.length}: ${f.name}`);
@@ -78,6 +80,40 @@ const AdminAddProject = () => {
               }
             })
           );
+          
+          // Create project first to get ID, then upload images
+          const tempProject = await addProject({
+            title: title.trim(),
+            description: description.trim(),
+            category: category.trim() || undefined,
+            filterCategory: filterCategory.trim() || undefined,
+            tech: tech
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean),
+            images: undefined, // Will update after uploading
+          });
+          
+          // Upload to Firebase Storage and get URLs
+          console.log("Uploading images to Firebase Storage...");
+          images = await Promise.all(
+            compressedImages.map(async (dataUrl, index) => {
+              try {
+                const storageUrl = await uploadImageToFirebase(dataUrl, tempProject.id, index);
+                console.log(`Uploaded image ${index + 1} to Storage: ${storageUrl.substring(0, 50)}...`);
+                return storageUrl;
+              } catch (err) {
+                console.error("Error uploading to Storage, using data URL:", err);
+                // Fallback to data URL if Storage fails
+                return dataUrl;
+              }
+            })
+          );
+          
+          // Update project with image URLs
+          const { updateProject } = await import("@/lib/storage");
+          await updateProject(tempProject.id, { images });
+          
           setCompressing(false);
         } catch (err) {
           setCompressing(false);
@@ -85,26 +121,28 @@ const AdminAddProject = () => {
           setSubmitting(false);
           return;
         }
+      } else {
+        // No images, just create the project
+        await addProject({
+          title: title.trim(),
+          description: description.trim(),
+          category: category.trim() || undefined,
+          filterCategory: filterCategory.trim() || undefined,
+          tech: tech
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          images: undefined,
+        });
       }
       
-      const newProject = await addProject({
-        title: title.trim(),
-        description: description.trim(),
-        category: category.trim() || undefined,
-        filterCategory: filterCategory.trim() || undefined,
-        tech: tech
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
-        images,
-      });
+      // Reload to get the final project
+      const { loadData } = await import("@/lib/storage");
+      const verifyData = await loadData();
+      const newProject = verifyData.projects[0]; // Most recently added
       
       // Verify project was saved
       console.log('Project saved:', newProject);
-      
-      // Verify it's in storage
-      const { loadData } = await import("@/lib/storage");
-      const verifyData = await loadData();
       console.log('Projects in storage after save:', verifyData.projects.length);
       
       // Dispatch custom event to trigger refresh on home page
