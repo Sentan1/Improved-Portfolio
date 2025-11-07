@@ -21,8 +21,11 @@ const PORTFOLIO_DOC_ID = "portfolio_data_v1";
 
 // Check if Firebase is configured
 function isFirebaseConfigured(): boolean {
-  const config = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-  return config && config !== "YOUR_PROJECT_ID" && config.length > 0;
+  // Check if we have a valid project ID (either from env or fallback)
+  const envConfig = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+  const fallbackConfig = "portfolio-db982"; // From firebase.ts fallback
+  const projectId = envConfig || fallbackConfig;
+  return projectId && projectId !== "YOUR_PROJECT_ID" && projectId.length > 0;
 }
 
 // Load portfolio data from Firestore
