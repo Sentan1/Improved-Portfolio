@@ -103,9 +103,10 @@ const AdminAddProject = () => {
                 console.log(`Uploaded image ${index + 1} to Storage: ${storageUrl.substring(0, 50)}...`);
                 return storageUrl;
               } catch (err) {
-                console.error("Error uploading to Storage, using data URL:", err);
-                // Fallback to data URL if Storage fails
-                return dataUrl;
+                console.error("Error uploading to Storage:", err);
+                // Don't use data URL as fallback - Storage must work
+                // Throw error so user knows Storage isn't working
+                throw new Error(`Failed to upload image ${index + 1} to Firebase Storage. Please check that Storage is enabled.`);
               }
             })
           );
