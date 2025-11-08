@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { loadData, saveData, isAdmin as loadIsAdmin, setAdmin, deleteProject, updateProject, addExperience, updateExperience, deleteExperience, getHeroText, getHeroTextSync, setHeroText, type Project, type Experience } from "@/lib/storage";
+import { loadData, saveData, isAdmin as loadIsAdmin, setAdmin, deleteProject, updateProject, addExperience, updateExperience, deleteExperience, getHeroText, getHeroTextSync, setHeroText, fileToDataUrl, type Project, type Experience } from "@/lib/storage";
+import { uploadImageToFirebase } from "@/lib/firebaseStorage";
 import { login, logout, onAuthChange, isAuthenticated, getCurrentUser } from "@/lib/auth";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
@@ -31,6 +32,11 @@ const Index = () => {
   const [editFilterCategory, setEditFilterCategory] = useState("");
   const [editTech, setEditTech] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [editImageFiles, setEditImageFiles] = useState<File[]>([]);
+  const [editImagePreviews, setEditImagePreviews] = useState<string[]>([]);
+  const [editExistingImages, setEditExistingImages] = useState<string[]>([]);
+  const [editCompressing, setEditCompressing] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [experience, setExperience] = useState<Experience[]>([]);
@@ -376,7 +382,10 @@ const Index = () => {
                     setEditDescription(project.description);
                     setEditCategory(project.category || "");
                     setEditFilterCategory(project.filterCategory || "");
-                    setEditTech(project.tech.join(", "));
+                    setEditTech(project.tech && Array.isArray(project.tech) ? project.tech.join(", ") : "");
+                    setEditExistingImages(project.images || []);
+                    setEditImageFiles([]);
+                    setEditImagePreviews([]);
                     setEditProjectOpen(true);
                   }}>
                     <Pencil className="w-4 h-4 mr-1" /> Edit
@@ -449,9 +458,9 @@ const Index = () => {
 
       {/* Edit Project Dialog */}
       <Dialog open={editProjectOpen} onOpenChange={setEditProjectOpen}>
-        <DialogContent>
+        <DialogContent className="bg-slate-800 border-slate-700 text-slate-100 max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
+            <DialogTitle className="text-slate-100">Edit Project</DialogTitle>
           </DialogHeader>
           {editingProject && (
             <div className="space-y-4">
@@ -504,19 +513,159 @@ const Index = () => {
                   className="bg-slate-700/50 border-slate-600 text-slate-100" 
                 />
               </div>
+
+              {/* Image Management Section */}
+              <div className="space-y-3 pt-2 border-t border-slate-700">
+                <Label className="text-slate-200">Project Images</Label>
+                
+                {/* Existing Images */}
+                {editExistingImages.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-slate-400">Current Images ({editExistingImages.length})</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {editExistingImages.map((imgUrl, idx) => (
+                        <div key={idx} className="relative group">
+                          <img 
+                            src={imgUrl} 
+                            alt={`Existing ${idx + 1}`}
+                            className="w-full h-24 object-cover rounded border border-slate-600"
+                          />
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                            onClick={() => {
+                              setEditExistingImages(editExistingImages.filter((_, i) => i !== idx));
+                            }}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add New Images */}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-images" className="text-slate-200">Add New Images (PNG or JPG, up to 5)</Label>
+                  <Input 
+                    id="edit-images" 
+                    type="file" 
+                    accept="image/png,image/jpeg,image/jpg" 
+                    multiple 
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files || []).slice(0, 5);
+                      setEditImageFiles(files);
+                      
+                      // Create previews
+                      try {
+                        const previews = await Promise.all(
+                          files.map((file) => {
+                            return new Promise<string>((resolve, reject) => {
+                              const reader = new FileReader();
+                              reader.onload = () => resolve(reader.result as string);
+                              reader.onerror = reject;
+                              reader.readAsDataURL(file);
+                            });
+                          })
+                        );
+                        setEditImagePreviews(previews);
+                      } catch (err) {
+                        console.error("Image preview error:", err);
+                      }
+                    }}
+                    className="bg-slate-700/50 border-slate-600 text-slate-100 file:text-slate-200" 
+                  />
+                  {editImagePreviews.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {editImagePreviews.map((preview, idx) => (
+                        <div key={idx} className="relative">
+                          <img 
+                            src={preview} 
+                            alt={`Preview ${idx + 1}`} 
+                            className="w-full h-24 object-cover rounded border border-slate-600"
+                          />
+                          <span className="absolute top-1 right-1 bg-slate-800/80 text-slate-200 text-xs px-1 rounded">
+                            {idx + 1}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {editCompressing && (
+                <div className="bg-blue-900/50 border border-blue-700 text-blue-200 px-4 py-2 rounded text-sm">
+                  Compressing images... This may take a moment.
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
-                <Button variant="secondary" onClick={() => setEditProjectOpen(false)}>Cancel</Button>
-                <Button onClick={async () => {
-                  await updateProject(editingProject.id, {
-                    title: editTitle.trim(),
-                    description: editDescription.trim(),
-                    category: editCategory.trim() || undefined,
-                    filterCategory: editFilterCategory.trim() || undefined,
-                    tech: editTech.split(",").map((t) => t.trim()).filter(Boolean),
-                  });
-                  refresh();
+                <Button variant="secondary" onClick={() => {
                   setEditProjectOpen(false);
-                }}>Save Changes</Button>
+                  setEditImageFiles([]);
+                  setEditImagePreviews([]);
+                }} disabled={editSaving || editCompressing}>Cancel</Button>
+                <Button onClick={async () => {
+                  setEditSaving(true);
+                  try {
+                    let finalImages = [...editExistingImages];
+                    
+                    // Upload new images if any
+                    if (editImageFiles.length > 0) {
+                      setEditCompressing(true);
+                      try {
+                        const compressedImages = await Promise.all(
+                          editImageFiles.map(async (f) => {
+                            const compressed = await fileToDataUrl(f);
+                            if (compressed.length > 500000) {
+                              throw new Error(`Image ${f.name} is too large after compression. Maximum allowed is 500KB.`);
+                            }
+                            return compressed;
+                          })
+                        );
+                        
+                        const projectId = editingProject.id;
+                        const uploadedUrls = await Promise.all(
+                          compressedImages.map(async (dataUrl, index) => {
+                            const storageUrl = await uploadImageToFirebase(dataUrl, projectId, editExistingImages.length + index);
+                            return storageUrl;
+                          })
+                        );
+                        
+                        finalImages = [...editExistingImages, ...uploadedUrls];
+                        setEditCompressing(false);
+                      } catch (err) {
+                        setEditCompressing(false);
+                        setEditSaving(false);
+                        alert(err instanceof Error ? err.message : "Failed to process images");
+                        return;
+                      }
+                    }
+                    
+                    await updateProject(editingProject.id, {
+                      title: editTitle.trim(),
+                      description: editDescription.trim(),
+                      category: editCategory.trim() || undefined,
+                      filterCategory: editFilterCategory.trim() || undefined,
+                      tech: editTech.split(",").map((t) => t.trim()).filter(Boolean),
+                      images: finalImages.length > 0 ? finalImages : undefined,
+                    });
+                    refresh();
+                    setEditProjectOpen(false);
+                    setEditImageFiles([]);
+                    setEditImagePreviews([]);
+                  } catch (err) {
+                    console.error("Error updating project:", err);
+                    alert("Failed to update project");
+                  } finally {
+                    setEditSaving(false);
+                  }
+                }} disabled={editSaving || editCompressing}>
+                  {editCompressing ? "Compressing..." : editSaving ? "Saving..." : "Save Changes"}
+                </Button>
               </div>
             </div>
           )}
