@@ -8,7 +8,7 @@ import { auth } from "./firebase";
 
 // Admin email - use environment variable or fallback
 // This will still be visible in the build, but it's better than hardcoding
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "admin@portfolio.local";
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "adrian@anda.land";
 
 // Listen for auth state changes
 export function onAuthChange(callback: (user: User | null) => void) {

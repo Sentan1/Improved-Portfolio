@@ -21,7 +21,7 @@ I've updated your code to use Firebase Authentication, which means:
 2. Click "Users" tab
 3. Click "Add user"
 4. Enter:
-   - **Email**: Your email (e.g., `your-email@gmail.com`)
+   - **Email**: `adrian@anda.land` (this is your admin email)
    - **Password**: Your secure password (e.g., `Huh???2006` or something stronger)
 5. Click "Add user"
 
@@ -67,7 +67,9 @@ service firebase.storage {
 
 1. Restart your dev server: `npm run dev`
 2. Click "Admin" button
-3. Enter the email and password you created
+3. Enter:
+   - **Email**: `adrian@anda.land`
+   - **Password**: The password you set in Firebase
 4. You should be logged in!
 
 ## What Changed
