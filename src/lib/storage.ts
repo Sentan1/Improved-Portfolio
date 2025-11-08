@@ -29,6 +29,7 @@ export type PortfolioData = {
   experience: Experience[];
   profilePhoto?: string; // base64 data URL for profile photo
   aboutContent?: AboutContent;
+  heroText?: string; // Hero section text (editable by admin)
 };
 
 const STORAGE_KEY = "portfolio:data:v1";
@@ -481,6 +482,23 @@ export function getAboutContentSync(): AboutContent {
 export async function setAboutContent(content: AboutContent): Promise<void> {
   const data = await loadData();
   data.aboutContent = content;
+  await saveData(data);
+}
+
+// Hero text functions
+export async function getHeroText(): Promise<string> {
+  const data = await loadData();
+  return data.heroText || "Project showcase";
+}
+
+export function getHeroTextSync(): string {
+  const data = loadDataSync();
+  return data.heroText || "Project showcase";
+}
+
+export async function setHeroText(text: string): Promise<void> {
+  const data = await loadData();
+  data.heroText = text.trim() || undefined;
   await saveData(data);
 }
 

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { loadData, saveData, isAdmin as loadIsAdmin, setAdmin, deleteProject, updateProject, addExperience, updateExperience, deleteExperience, type Project, type Experience } from "@/lib/storage";
+import { loadData, saveData, isAdmin as loadIsAdmin, setAdmin, deleteProject, updateProject, addExperience, updateExperience, deleteExperience, getHeroText, getHeroTextSync, setHeroText, type Project, type Experience } from "@/lib/storage";
 import { login, logout, onAuthChange, isAuthenticated, getCurrentUser } from "@/lib/auth";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
@@ -34,12 +34,17 @@ const Index = () => {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [experience, setExperience] = useState<Experience[]>([]);
+  const [heroText, setHeroTextState] = useState<string>(getHeroTextSync());
+  const [editHeroTextOpen, setEditHeroTextOpen] = useState(false);
+  const [editHeroTextValue, setEditHeroTextValue] = useState("");
 
   const refresh = async () => {
     const data = await loadData();
     console.log('Refreshing data, projects count:', data.projects.length);
     setProjects([...data.projects]); // Create new array to force re-render
     setExperience([...data.experience]); // Create new array to force re-render
+    const text = await getHeroText();
+    setHeroTextState(text);
   };
 
   // Get unique filter categories from projects
@@ -62,6 +67,11 @@ const Index = () => {
   }, [projects, selectedFilter]);
 
   useEffect(() => {
+    const loadHeroText = async () => {
+      const text = await getHeroText();
+      setHeroTextState(text);
+    };
+    loadHeroText();
     refresh();
     
     // Listen for Firebase auth state changes
@@ -240,10 +250,24 @@ const Index = () => {
             <span className="text-3xl md:text-4xl text-slate-400">Information Technology</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto">
-            Project showcase
-          </p>
-          {/* Updated text */}
+          <div className="relative mb-10 group">
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-2xl mx-auto">
+              {heroText}
+            </p>
+            {isAdmin && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="absolute -top-2 right-0 opacity-70 hover:opacity-100 transition-opacity"
+                onClick={() => {
+                  setEditHeroTextValue(heroText);
+                  setEditHeroTextOpen(true);
+                }}
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
           
           <Link 
             to="/about"
@@ -496,6 +520,35 @@ const Index = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Hero Text Dialog */}
+      <Dialog open={editHeroTextOpen} onOpenChange={setEditHeroTextOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Hero Text</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="hero-text" className="text-slate-200">Hero Text</Label>
+              <Input
+                id="hero-text"
+                value={editHeroTextValue}
+                onChange={(e) => setEditHeroTextValue(e.target.value)}
+                placeholder="Project showcase"
+                className="bg-slate-700/50 border-slate-600 text-slate-100"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="secondary" onClick={() => setEditHeroTextOpen(false)}>Cancel</Button>
+              <Button onClick={async () => {
+                await setHeroText(editHeroTextValue);
+                setHeroTextState(editHeroTextValue);
+                setEditHeroTextOpen(false);
+              }}>Save Changes</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
