@@ -52,10 +52,27 @@ const Index = () => {
     try {
       const data = await loadData();
       console.log('Refreshing data, projects count:', data.projects.length);
-      setProjects([...data.projects]); // Create new array to force re-render
-      setExperience([...data.experience]); // Create new array to force re-render
+      console.log('Projects:', data.projects);
+      console.log('Experience:', data.experience);
+      
+      if (data.projects && Array.isArray(data.projects)) {
+        setProjects([...data.projects]); // Create new array to force re-render
+      } else {
+        console.warn('Projects data is not an array:', data.projects);
+        setProjects([]);
+      }
+      
+      if (data.experience && Array.isArray(data.experience)) {
+        setExperience([...data.experience]); // Create new array to force re-render
+      } else {
+        console.warn('Experience data is not an array:', data.experience);
+        setExperience([]);
+      }
+      
       const text = await getHeroText();
       setHeroTextState(text);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
     } finally {
       isRefreshingRef.current = false;
     }
@@ -100,7 +117,7 @@ const Index = () => {
     });
     
     return () => unsubscribe();
-  }, []);
+  }, [refresh]);
 
   // Refresh when location changes (e.g., returning from add project page)
   const prevLocationRef = useRef<string>(location.pathname + location.hash);

@@ -83,6 +83,18 @@ export async function loadData(): Promise<PortfolioData> {
     const { loadDataFromFirebase } = await import("./firebaseStorage");
     const firebaseData = await loadDataFromFirebase();
     if (firebaseData) {
+      console.log("Firebase data received:", firebaseData);
+      
+      // Ensure projects and experience are arrays
+      if (!Array.isArray(firebaseData.projects)) {
+        console.warn("Projects is not an array, setting to empty array");
+        firebaseData.projects = [];
+      }
+      if (!Array.isArray(firebaseData.experience)) {
+        console.warn("Experience is not an array, setting to empty array");
+        firebaseData.experience = [];
+      }
+      
       // Migrate older single-image shape to images[]
       firebaseData.projects = firebaseData.projects.map((p: any) => {
         if (!p.images && p.imageDataUrl) {
@@ -105,6 +117,8 @@ export async function loadData(): Promise<PortfolioData> {
         }
         return p;
       });
+      
+      console.log("Processed Firebase data - projects:", firebaseData.projects.length, "experience:", firebaseData.experience.length);
       
       // Also save to localStorage as backup
       try {
