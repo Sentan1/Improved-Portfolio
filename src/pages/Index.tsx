@@ -1,6 +1,6 @@
 
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { ArrowRight, Mail, Github, Linkedin, Plus, Pencil, Trash2, LogIn, LogOut, Image as ImageIcon } from "lucide-react";
 import MagicalBackground from "@/components/MagicalBackground";
 import { Button } from "@/components/ui/button";
@@ -45,14 +45,21 @@ const Index = () => {
   const [editHeroTextOpen, setEditHeroTextOpen] = useState(false);
   const [editHeroTextValue, setEditHeroTextValue] = useState("");
 
-  const refresh = async () => {
-    const data = await loadData();
-    console.log('Refreshing data, projects count:', data.projects.length);
-    setProjects([...data.projects]); // Create new array to force re-render
-    setExperience([...data.experience]); // Create new array to force re-render
-    const text = await getHeroText();
-    setHeroTextState(text);
-  };
+  const isRefreshingRef = useRef(false);
+  const refresh = useCallback(async () => {
+    if (isRefreshingRef.current) return; // Prevent concurrent refreshes
+    isRefreshingRef.current = true;
+    try {
+      const data = await loadData();
+      console.log('Refreshing data, projects count:', data.projects.length);
+      setProjects([...data.projects]); // Create new array to force re-render
+      setExperience([...data.experience]); // Create new array to force re-render
+      const text = await getHeroText();
+      setHeroTextState(text);
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, []);
 
   // Get unique filter categories from projects
   const filterCategories = useMemo(() => {
@@ -96,42 +103,60 @@ const Index = () => {
   }, []);
 
   // Refresh when location changes (e.g., returning from add project page)
+  const prevLocationRef = useRef<string>(location.pathname + location.hash);
   useEffect(() => {
-    // Add a small delay to ensure data is updated
-    const timer = setTimeout(() => {
-      refresh();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [location.pathname, location.hash]);
+    const currentLocation = location.pathname + location.hash;
+    // Only refresh if location actually changed (not just on mount)
+    if (currentLocation !== prevLocationRef.current) {
+      prevLocationRef.current = currentLocation;
+      // Add a small delay to ensure data is updated
+      const timer = setTimeout(() => {
+        refresh();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname, location.hash, refresh]);
   
   // Also listen for storage changes (in case data is updated in another tab/window)
   useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout;
+    
     const handleStorageChange = () => {
-      refresh();
+      // Debounce storage changes
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => {
+        refresh();
+      }, 300);
     };
     const handleDataUpdate = () => {
-      // Force immediate refresh when custom event fires
-      setTimeout(() => {
+      // Debounce custom events
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => {
         refresh();
-      }, 10);
+      }, 100);
     };
     const handleVisibilityChange = () => {
-      // Refresh when page becomes visible (e.g., navigating back)
+      // Only refresh when page becomes visible (e.g., navigating back)
       if (document.visibilityState === 'visible') {
-        refresh();
+        clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          refresh();
+        }, 200);
       }
     };
+    
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('portfolio-data-updated', handleDataUpdate);
     window.addEventListener('focus', handleStorageChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
+      clearTimeout(refreshTimeout);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('portfolio-data-updated', handleDataUpdate);
       window.removeEventListener('focus', handleStorageChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [refresh]);
 
   const handleLogin = async () => {
     if (!adminEmail || !adminPassword) {
