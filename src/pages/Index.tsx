@@ -140,26 +140,15 @@ const Index = () => {
     }
   }, [location.pathname, location.hash, refresh]);
   
-  // Also listen for storage changes (in case data is updated in another tab/window)
-  // But only listen, don't auto-refresh on every event
+  // Only listen for manual data update events (from admin actions)
+  // Don't listen to storage events - they cause refresh loops
   useEffect(() => {
     let refreshTimeout: NodeJS.Timeout;
     let lastRefreshTime = 0;
-    const MIN_REFRESH_INTERVAL = 5000; // Don't refresh more than once per 5 seconds
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if it's from another tab/window (not our own changes)
-      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          lastRefreshTime = Date.now();
-          refresh();
-        }, 1000);
-      }
-    };
+    const MIN_REFRESH_INTERVAL = 10000; // Don't refresh more than once per 10 seconds
     
     const handleDataUpdate = () => {
-      // Only refresh if enough time has passed
+      // Only refresh if enough time has passed (prevents loops)
       if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
         clearTimeout(refreshTimeout);
         refreshTimeout = setTimeout(() => {
@@ -169,14 +158,12 @@ const Index = () => {
       }
     };
     
-    // Remove focus and visibility listeners - they cause too many refreshes
-    // Only listen to actual storage events from other tabs
-    window.addEventListener('storage', handleStorageChange);
+    // Only listen to custom events (fired manually after admin saves)
+    // Don't listen to storage events - they cause infinite loops
     window.addEventListener('portfolio-data-updated', handleDataUpdate);
     
     return () => {
       clearTimeout(refreshTimeout);
-      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('portfolio-data-updated', handleDataUpdate);
     };
   }, [refresh]);

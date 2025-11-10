@@ -83,15 +83,22 @@ export async function loadData(): Promise<PortfolioData> {
     const { loadDataFromFirebase } = await import("./firebaseStorage");
     const firebaseData = await loadDataFromFirebase();
     if (firebaseData) {
-      console.log("Firebase data received:", firebaseData);
+      // Only log in development to reduce console spam
+      if (import.meta.env.DEV) {
+        console.log("Firebase data received:", firebaseData);
+      }
       
       // Ensure projects and experience are arrays
       if (!Array.isArray(firebaseData.projects)) {
-        console.warn("Projects is not an array, setting to empty array");
+        if (import.meta.env.DEV) {
+          console.warn("Projects is not an array, setting to empty array");
+        }
         firebaseData.projects = [];
       }
       if (!Array.isArray(firebaseData.experience)) {
-        console.warn("Experience is not an array, setting to empty array");
+        if (import.meta.env.DEV) {
+          console.warn("Experience is not an array, setting to empty array");
+        }
         firebaseData.experience = [];
       }
       
@@ -118,12 +125,12 @@ export async function loadData(): Promise<PortfolioData> {
         return p;
       });
       
-      console.log("Processed Firebase data - projects:", firebaseData.projects.length, "experience:", firebaseData.experience.length);
+      if (import.meta.env.DEV) {
+        console.log("Processed Firebase data - projects:", firebaseData.projects.length, "experience:", firebaseData.experience.length);
+      }
       
-      // Also save to localStorage as backup
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(firebaseData));
-      } catch {}
+      // Don't save to localStorage automatically - it triggers storage events that cause refresh loops
+      // localStorage is only used as a fallback if Firebase fails
       return firebaseData;
     }
   } catch (error) {
