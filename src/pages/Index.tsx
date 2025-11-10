@@ -12,6 +12,7 @@ import { loadData, saveData, isAdmin as loadIsAdmin, setAdmin, deleteProject, up
 import { uploadImageToFirebase } from "@/lib/firebaseStorage";
 import { login, logout, onAuthChange, isAuthenticated, getCurrentUser } from "@/lib/auth";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -324,15 +325,27 @@ const Index = () => {
               <p className="text-slate-400 text-lg">No projects found in this category.</p>
             </div>
           ) : (
-            filteredProjects.map((project) => (
-            <div 
-              key={project.id}
-              className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-slate-700/50 cursor-pointer"
-              onClick={() => {
-                setSelectedProject(project);
-                setProjectModalOpen(true);
-              }}
-            >
+            filteredProjects.map((project, index) => {
+              const ProjectCard = ({ project, delay = 0 }: { project: Project; delay?: number }) => {
+                const { ref, isVisible } = useScrollAnimation();
+                
+                return (
+                  <div 
+                    ref={ref}
+                    key={project.id}
+                    className={`group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 border border-slate-700/50 cursor-pointer hover:scale-105 ${
+                      isVisible 
+                        ? "opacity-100 translate-y-0" 
+                        : "opacity-0 translate-y-10"
+                    }`}
+                    style={{
+                      transitionDelay: isVisible ? `${delay}ms` : "0ms"
+                    }}
+                    onClick={() => {
+                      setSelectedProject(project);
+                      setProjectModalOpen(true);
+                    }}
+                  >
               <div className={`w-full h-36 bg-gradient-to-br ${project.color || "from-slate-700 to-slate-800"} rounded-xl mb-4 relative overflow-hidden flex items-center justify-center`}>
                 {project.images && project.images[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -400,8 +413,12 @@ const Index = () => {
                   </Button>
                 </div>
               )}
-            </div>
-            ))
+                  </div>
+                );
+              };
+
+              return <ProjectCard key={project.id} project={project} delay={index * 100} />;
+            })
           )}
         </div>
       </section>
