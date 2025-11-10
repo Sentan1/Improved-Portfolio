@@ -10,13 +10,16 @@ const PageTransition = ({ children }: PageTransitionProps) => {
   const [displayLocation, setDisplayLocation] = useState(location);
   const [transitionStage, setTransitionStage] = useState<"entering" | "entered">("entered");
   const isTransitioning = useRef(false);
+  const locationKeyRef = useRef<string>(location.pathname + location.hash);
 
   useEffect(() => {
     const currentPath = location.pathname + location.hash;
-    const displayPath = displayLocation.pathname + displayLocation.hash;
+    const currentKey = currentPath;
     
-    if (currentPath !== displayPath && !isTransitioning.current) {
+    // Only transition if the path actually changed and we're not already transitioning
+    if (currentKey !== locationKeyRef.current && !isTransitioning.current) {
       isTransitioning.current = true;
+      locationKeyRef.current = currentKey;
       setTransitionStage("entering");
       
       let timer: NodeJS.Timeout;
@@ -30,16 +33,15 @@ const PageTransition = ({ children }: PageTransitionProps) => {
             setTransitionStage("entered");
             isTransitioning.current = false;
           });
-        }, 200); // Slightly longer for smoother transition
+        }, 200);
       });
       
       return () => {
         if (rafId) cancelAnimationFrame(rafId);
         if (timer) clearTimeout(timer);
-        isTransitioning.current = false;
       };
     }
-  }, [location, displayLocation]);
+  }, [location.pathname, location.hash]); // Only depend on location properties, not the whole object
 
   return (
     <div
@@ -47,7 +49,7 @@ const PageTransition = ({ children }: PageTransitionProps) => {
         transitionStage === "entering" ? "opacity-0" : "opacity-100"
       }`}
       style={{
-        minHeight: "100vh", // Prevent layout shift
+        minHeight: "100vh",
       }}
     >
       {children}
