@@ -32,19 +32,11 @@ function isFirebaseConfigured(): boolean {
 // Check if a URL is a Google Cloud Storage URL (that might be broken)
 function isGoogleCloudStorageUrl(url: string): boolean {
   if (typeof url !== 'string') return false;
-  // Firebase Storage URLs use firebasestorage.googleapis.com - these are OK
-  if (url.includes('firebasestorage.googleapis.com')) {
-    return false;
-  }
-  // Check for common Google Cloud Storage URL patterns (but not Firebase Storage)
+  // Check for common Google Cloud Storage URL patterns
   return url.includes('storage.googleapis.com') || 
          url.includes('storage.cloud.google.com') ||
          url.includes('googleapis.com/storage') ||
-         (url.includes('googleapis.com') && url.includes('/storage/')) ||
-         // Also check for other Google Cloud patterns
-         (url.includes('cloud.google.com') && url.includes('/storage/')) ||
-         url.includes('gs://') || // Google Cloud Storage bucket reference
-         url.match(/https?:\/\/[^/]+\.storage\.googleapis\.com/); // Direct bucket URLs
+         (url.includes('googleapis.com') && url.includes('/storage/'));
 }
 
 // Remove undefined values from data (Firestore doesn't allow undefined)
