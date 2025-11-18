@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { getProfilePhoto, getProfilePhotoSync, setProfilePhoto, fileToDataUrl, isAdmin, getAboutContent, getAboutContentSync, setAboutContent, type AboutContent } from "@/lib/storage";
 
 const About = () => {
@@ -245,6 +245,7 @@ const About = () => {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit About Me</DialogTitle>
+              <DialogDescription>Update your about section content, paragraphs, and skills</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">

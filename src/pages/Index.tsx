@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { loadData, saveData, isAdmin as loadIsAdmin, setAdmin, deleteProject, updateProject, addExperience, updateExperience, deleteExperience, getHeroText, getHeroTextSync, setHeroText, fileToDataUrl, type Project, type Experience } from "@/lib/storage";
 import { uploadImageToFirebase } from "@/lib/firebaseStorage";
 import { login, logout, onAuthChange, isAuthenticated, getCurrentUser } from "@/lib/auth";
@@ -268,6 +268,7 @@ const Index = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Admin Login</DialogTitle>
+            <DialogDescription>Enter your email and password to access the admin panel</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
@@ -490,6 +491,7 @@ const Index = () => {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedProject?.title}</DialogTitle>
+            <DialogDescription>{selectedProject?.description?.substring(0, 100)}{selectedProject?.description && selectedProject.description.length > 100 ? '...' : ''}</DialogDescription>
           </DialogHeader>
           {selectedProject && (
             <div className="space-y-3">
@@ -570,6 +572,7 @@ const Index = () => {
         <DialogContent className="bg-slate-800 border-slate-700 text-slate-100 max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-slate-100">Edit Project</DialogTitle>
+            <DialogDescription className="text-slate-300">Update project details, images, and information</DialogDescription>
           </DialogHeader>
           {editingProject && (
             <div className="space-y-4">
@@ -786,6 +789,7 @@ const Index = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Hero Text</DialogTitle>
+            <DialogDescription>Update the main heading text displayed in the hero section</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
