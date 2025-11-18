@@ -39,6 +39,23 @@ export function generateId(prefix: string = "id"): string {
   return `${prefix}_${Math.random().toString(36).slice(2)}_${Date.now()}`;
 }
 
+// Check if a URL is a Google Cloud Storage URL (that might be broken)
+function isGoogleCloudStorageUrl(url: string): boolean {
+  if (typeof url !== 'string') return false;
+  // Check for common Google Cloud Storage URL patterns
+  return url.includes('storage.googleapis.com') || 
+         url.includes('storage.cloud.google.com') ||
+         url.includes('googleapis.com/storage') ||
+         (url.includes('googleapis.com') && url.includes('/storage/'));
+}
+
+// Check if a URL is a valid Firebase Storage URL
+function isFirebaseStorageUrl(url: string): boolean {
+  if (typeof url !== 'string') return false;
+  // Firebase Storage URLs typically look like: https://firebasestorage.googleapis.com/...
+  return url.includes('firebasestorage.googleapis.com');
+}
+
 function getDefaultData(): PortfolioData {
   return {
     projects: [
@@ -110,12 +127,25 @@ export async function loadData(): Promise<PortfolioData> {
         return p as Project;
       });
       
-      // Clean up: Remove any base64 images that are too large (keep only Storage URLs)
+      // Track if we removed any Google Cloud URLs before filtering
+      let hadBrokenUrls = false;
+      
+      // Clean up: Remove any base64 images and broken Google Cloud URLs (keep only Firebase Storage URLs)
       firebaseData.projects = firebaseData.projects.map((p: any) => {
         if (p.images && Array.isArray(p.images)) {
           p.images = p.images.filter((img: string) => {
             // Only keep HTTP/HTTPS URLs - remove all base64 data URLs
-            return typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'));
+            if (typeof img !== 'string' || (!img.startsWith('http://') && !img.startsWith('https://'))) {
+              return false;
+            }
+            // Remove Google Cloud Storage URLs (they're broken now)
+            if (isGoogleCloudStorageUrl(img)) {
+              hadBrokenUrls = true;
+              console.warn(`Removing broken Google Cloud Storage URL from project "${p.title}": ${img.substring(0, 50)}...`);
+              return false;
+            }
+            // Keep Firebase Storage URLs and other valid URLs
+            return true;
           });
           // Remove images array if empty
           if (p.images.length === 0) {
@@ -127,6 +157,17 @@ export async function loadData(): Promise<PortfolioData> {
       
       if (import.meta.env.DEV) {
         console.log("Processed Firebase data - projects:", firebaseData.projects.length, "experience:", firebaseData.experience.length);
+      }
+      
+      // If we removed any Google Cloud URLs, save the cleaned data back to Firebase
+      // This ensures broken URLs are permanently removed
+      if (hadBrokenUrls) {
+        try {
+          await saveData(firebaseData);
+          console.log("Cleaned data saved back to Firebase (removed broken Google Cloud URLs)");
+        } catch (error) {
+          console.warn("Failed to save cleaned data back to Firebase:", error);
+        }
       }
       
       // Don't save to localStorage automatically - it triggers storage events that cause refresh loops
@@ -151,12 +192,21 @@ export async function loadData(): Promise<PortfolioData> {
       return p as Project;
     });
     
-    // Clean up: Remove any base64 images that are too large (keep only Storage URLs)
+    // Clean up: Remove any base64 images and broken Google Cloud URLs (keep only Firebase Storage URLs)
     parsed.projects = parsed.projects.map((p: any) => {
       if (p.images && Array.isArray(p.images)) {
         p.images = p.images.filter((img: string) => {
           // Only keep HTTP/HTTPS URLs - remove all base64 data URLs
-          return typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'));
+          if (typeof img !== 'string' || (!img.startsWith('http://') && !img.startsWith('https://'))) {
+            return false;
+          }
+          // Remove Google Cloud Storage URLs (they're broken now)
+          if (isGoogleCloudStorageUrl(img)) {
+            console.warn(`Removing broken Google Cloud Storage URL from project "${p.title}": ${img.substring(0, 50)}...`);
+            return false;
+          }
+          // Keep Firebase Storage URLs and other valid URLs
+          return true;
         });
         // Remove images array if empty
         if (p.images.length === 0) {
