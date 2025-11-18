@@ -46,7 +46,25 @@ const Index = () => {
   const [editHeroTextOpen, setEditHeroTextOpen] = useState(false);
   const [editHeroTextValue, setEditHeroTextValue] = useState("");
 
-  const handleImageError = (src: string) => {
+  const handleImageError = async (src: string) => {
+    console.warn(`Image failed to load: ${src.substring(0, 100)}${src.length > 100 ? '...' : ''}`);
+    // Check if it's a Google Cloud URL we missed
+    if (src.includes('googleapis.com') && !src.includes('firebasestorage.googleapis.com')) {
+      console.warn('Detected Google Cloud URL that should have been filtered:', src.substring(0, 100));
+      // Try to remove it from the project if it's a Google Cloud URL
+      const projectWithBrokenImage = projects.find(p => p.images?.includes(src));
+      if (projectWithBrokenImage) {
+        console.log(`Attempting to remove broken Google Cloud URL from project: ${projectWithBrokenImage.title}`);
+        const updatedImages = projectWithBrokenImage.images?.filter(img => img !== src) || [];
+        if (updatedImages.length === 0) {
+          await updateProject(projectWithBrokenImage.id, { images: undefined });
+        } else {
+          await updateProject(projectWithBrokenImage.id, { images: updatedImages });
+        }
+        // Refresh the data
+        refresh();
+      }
+    }
     setFailedImages(prev => new Set(prev).add(src));
   };
 
