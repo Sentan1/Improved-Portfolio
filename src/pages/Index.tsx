@@ -38,17 +38,12 @@ const Index = () => {
   const [editExistingImages, setEditExistingImages] = useState<string[]>([]);
   const [editCompressing, setEditCompressing] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
-  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [experience, setExperience] = useState<Experience[]>([]);
   const [heroText, setHeroTextState] = useState<string>(getHeroTextSync());
   const [editHeroTextOpen, setEditHeroTextOpen] = useState(false);
   const [editHeroTextValue, setEditHeroTextValue] = useState("");
-
-  const handleImageError = (src: string) => {
-    setFailedImages(prev => new Set(prev).add(src));
-  };
 
   const isRefreshingRef = useRef(false);
   const refresh = useCallback(async () => {
@@ -387,14 +382,9 @@ const Index = () => {
                     }}
                   >
               <div className={`w-full h-36 bg-gradient-to-br ${project.color || "from-slate-700 to-slate-800"} rounded-xl mb-4 relative overflow-hidden flex items-center justify-center`}>
-                {project.images && project.images[0] && !failedImages.has(project.images[0]) ? (
+                {project.images && project.images[0] ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img 
-                    src={project.images[0]} 
-                    alt={project.title} 
-                    className="w-full h-full object-cover"
-                    onError={() => handleImageError(project.images![0])}
-                  />
+                  <img src={project.images[0]} alt={project.title} className="w-full h-full object-cover" />
                 ) : (
                   <div className="flex items-center gap-2 text-slate-300/70">
                     <ImageIcon className="w-5 h-5" />
@@ -480,49 +470,20 @@ const Index = () => {
                   {selectedProject.images.length > 1 ? (
                     <Carousel className="w-full">
                       <CarouselContent>
-                        {selectedProject.images.slice(0, 5).filter(src => !failedImages.has(src)).map((src, idx) => (
+                        {selectedProject.images.slice(0, 5).map((src, idx) => (
                           <CarouselItem key={idx}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img 
-                              src={src} 
-                              alt={`${selectedProject.title} ${idx + 1}`} 
-                              className="w-full h-56 object-cover rounded"
-                              onError={() => handleImageError(src)}
-                            />
+                            <img src={src} alt={`${selectedProject.title} ${idx + 1}`} className="w-full h-56 object-cover rounded" />
                           </CarouselItem>
                         ))}
-                        {selectedProject.images.filter(src => failedImages.has(src)).length > 0 && (
-                          <CarouselItem>
-                            <div className="w-full h-56 bg-slate-700/50 rounded flex items-center justify-center">
-                              <div className="flex flex-col items-center gap-2 text-slate-400">
-                                <ImageIcon className="w-8 h-8" />
-                                <span className="text-sm">Image unavailable</span>
-                              </div>
-                            </div>
-                          </CarouselItem>
-                        )}
                       </CarouselContent>
                       <CarouselPrevious className="-left-3" />
                       <CarouselNext className="-right-3" />
                     </Carousel>
                   ) : (
                     <div className="w-full">
-                      {!failedImages.has(selectedProject.images[0]) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img 
-                          src={selectedProject.images[0]} 
-                          alt={selectedProject.title} 
-                          className="w-full h-56 object-cover rounded"
-                          onError={() => handleImageError(selectedProject.images[0])}
-                        />
-                      ) : (
-                        <div className="w-full h-56 bg-slate-700/50 rounded flex items-center justify-center">
-                          <div className="flex flex-col items-center gap-2 text-slate-400">
-                            <ImageIcon className="w-8 h-8" />
-                            <span className="text-sm">Image unavailable</span>
-                          </div>
-                        </div>
-                      )}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={selectedProject.images[0]} alt={selectedProject.title} className="w-full h-56 object-cover rounded" />
                     </div>
                   )}
                 </div>
