@@ -177,19 +177,10 @@ function deepCleanForFirestore(data: any, depth: number = 0): any {
             // ONLY keep HTTP/HTTPS URLs (Firebase Storage URLs)
             // NEVER keep base64 data URLs or broken Google Cloud URLs
             if (img.startsWith('http://') || img.startsWith('https://')) {
-              // Check if it's a Firebase Storage URL first - always keep these
-              const isFirebase = img.includes('firebasestorage.googleapis.com') || 
-                                img.includes('firebasestorage.app') ||
-                                img.includes('portfolio-db982.firebasestorage.app') ||
-                                img.includes('portfolio-db982.appspot.com');
-              if (isFirebase) {
-                // Always keep Firebase Storage URLs
-                imageUrls.push(img);
-              } else if (!isGoogleCloudStorageUrl(img)) {
-                // Keep other URLs that aren't Google Cloud Storage
+              // Filter out Google Cloud Storage URLs (they're broken now)
+              if (!isGoogleCloudStorageUrl(img)) {
                 imageUrls.push(img);
               }
-              // Skip Google Cloud Storage URLs
             }
             // Skip all data: URLs - they should have been uploaded to Storage
           }
