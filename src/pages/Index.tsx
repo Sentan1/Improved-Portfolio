@@ -51,10 +51,9 @@ const Index = () => {
     isRefreshingRef.current = true;
     try {
       const data = await loadData();
-      // Only log in development to reduce console spam
-      if (import.meta.env.DEV) {
-        console.log('Refreshing data, projects count:', data.projects.length);
-      }
+      console.log('Refreshing data, projects count:', data.projects.length);
+      console.log('Projects:', data.projects);
+      console.log('Experience:', data.experience);
       
       if (data.projects && Array.isArray(data.projects)) {
         setProjects([...data.projects]); // Create new array to force re-render
@@ -122,24 +121,20 @@ const Index = () => {
 
   // Refresh when location changes (e.g., returning from add project page)
   const prevLocationRef = useRef<string>(location.pathname + location.hash);
-  const hasInitializedRef = useRef(false);
-  
   useEffect(() => {
     const currentLocation = location.pathname + location.hash;
-    // Only refresh if location actually changed (not on initial mount)
-    if (hasInitializedRef.current && currentLocation !== prevLocationRef.current) {
+    // Only refresh if location actually changed (not just on mount)
+    if (currentLocation !== prevLocationRef.current) {
       prevLocationRef.current = currentLocation;
       // Add a small delay to ensure data is updated
       const timer = setTimeout(() => {
         refresh();
       }, 100);
       return () => clearTimeout(timer);
-    } else if (!hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      prevLocationRef.current = currentLocation;
     }
   }, [location.pathname, location.hash, refresh]);
   
+<<<<<<< HEAD
   // Only listen for manual data update events (from admin actions)
   // Don't listen to storage events - they cause refresh loops
   useEffect(() => {
@@ -150,21 +145,50 @@ const Index = () => {
     const handleDataUpdate = () => {
       // Only refresh if enough time has passed (prevents loops)
       if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
+=======
+  // Also listen for storage changes (in case data is updated in another tab/window)
+  useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout;
+    
+    const handleStorageChange = () => {
+      // Debounce storage changes
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => {
+        refresh();
+      }, 300);
+    };
+    const handleDataUpdate = () => {
+      // Debounce custom events
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => {
+        refresh();
+      }, 100);
+    };
+    const handleVisibilityChange = () => {
+      // Only refresh when page becomes visible (e.g., navigating back)
+      if (document.visibilityState === 'visible') {
+>>>>>>> parent of 61b1522 (rte)
         clearTimeout(refreshTimeout);
         refreshTimeout = setTimeout(() => {
-          lastRefreshTime = Date.now();
           refresh();
-        }, 500);
+        }, 200);
       }
     };
     
+<<<<<<< HEAD
     // Only listen to custom events (fired manually after admin saves)
     // Don't listen to storage events - they cause infinite loops
+=======
+    window.addEventListener('storage', handleStorageChange);
+>>>>>>> parent of 61b1522 (rte)
     window.addEventListener('portfolio-data-updated', handleDataUpdate);
-    
+    window.addEventListener('focus', handleStorageChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       clearTimeout(refreshTimeout);
       window.removeEventListener('portfolio-data-updated', handleDataUpdate);
+      window.removeEventListener('focus', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [refresh]);
 
