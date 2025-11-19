@@ -137,8 +137,13 @@ const Index = () => {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Only listen for manual data update events (from admin actions)
   // Don't listen to storage events - they cause refresh loops
+=======
+  // Also listen for storage changes (in case data is updated in another tab/window)
+  // But only listen, don't auto-refresh on every event
+>>>>>>> parent of ec8c528 (es)
 =======
   // Also listen for storage changes (in case data is updated in another tab/window)
   // But only listen, don't auto-refresh on every event
@@ -152,6 +157,12 @@ const Index = () => {
     let lastRefreshTime = 0;
     const MIN_REFRESH_INTERVAL = 5000; // Don't refresh more than once per 5 seconds
 <<<<<<< HEAD
+<<<<<<< HEAD
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if it's from another tab/window (not our own changes)
+      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
+=======
     
     const handleStorageChange = (e: StorageEvent) => {
       // Only refresh if it's from another tab/window (not our own changes)
@@ -169,6 +180,19 @@ const Index = () => {
       }
     };
     
+    const handleDataUpdate = () => {
+      // Only refresh if enough time has passed
+      if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
+>>>>>>> parent of ec8c528 (es)
+        clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          lastRefreshTime = Date.now();
+          refresh();
+        }, 1000);
+      }
+    };
+    
+<<<<<<< HEAD
     const handleDataUpdate = () => {
       // Only refresh if enough time has passed
       if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
@@ -222,6 +246,11 @@ const Index = () => {
 =======
     window.addEventListener('storage', handleStorageChange);
 >>>>>>> parent of 61b1522 (rte)
+=======
+    // Remove focus and visibility listeners - they cause too many refreshes
+    // Only listen to actual storage events from other tabs
+    window.addEventListener('storage', handleStorageChange);
+>>>>>>> parent of ec8c528 (es)
 =======
     // Remove focus and visibility listeners - they cause too many refreshes
     // Only listen to actual storage events from other tabs
