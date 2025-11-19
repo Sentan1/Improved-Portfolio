@@ -135,15 +135,31 @@ const Index = () => {
   }, [location.pathname, location.hash, refresh]);
   
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Only listen for manual data update events (from admin actions)
   // Don't listen to storage events - they cause refresh loops
+=======
+  // Also listen for storage changes (in case data is updated in another tab/window)
+  // But only listen, don't auto-refresh on every event
+>>>>>>> parent of ec8c528 (es)
   useEffect(() => {
     let refreshTimeout: NodeJS.Timeout;
     let lastRefreshTime = 0;
-    const MIN_REFRESH_INTERVAL = 10000; // Don't refresh more than once per 10 seconds
+    const MIN_REFRESH_INTERVAL = 5000; // Don't refresh more than once per 5 seconds
+    
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if it's from another tab/window (not our own changes)
+      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
+        clearTimeout(refreshTimeout);
+        refreshTimeout = setTimeout(() => {
+          lastRefreshTime = Date.now();
+          refresh();
+        }, 1000);
+      }
+    };
     
     const handleDataUpdate = () => {
-      // Only refresh if enough time has passed (prevents loops)
+      // Only refresh if enough time has passed
       if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
 =======
   // Also listen for storage changes (in case data is updated in another tab/window)
@@ -176,16 +192,23 @@ const Index = () => {
     };
     
 <<<<<<< HEAD
+<<<<<<< HEAD
     // Only listen to custom events (fired manually after admin saves)
     // Don't listen to storage events - they cause infinite loops
 =======
     window.addEventListener('storage', handleStorageChange);
 >>>>>>> parent of 61b1522 (rte)
+=======
+    // Remove focus and visibility listeners - they cause too many refreshes
+    // Only listen to actual storage events from other tabs
+    window.addEventListener('storage', handleStorageChange);
+>>>>>>> parent of ec8c528 (es)
     window.addEventListener('portfolio-data-updated', handleDataUpdate);
     window.addEventListener('focus', handleStorageChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       clearTimeout(refreshTimeout);
+      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('portfolio-data-updated', handleDataUpdate);
       window.removeEventListener('focus', handleStorageChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);

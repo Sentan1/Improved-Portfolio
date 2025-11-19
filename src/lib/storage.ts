@@ -83,22 +83,15 @@ export async function loadData(): Promise<PortfolioData> {
     const { loadDataFromFirebase } = await import("./firebaseStorage");
     const firebaseData = await loadDataFromFirebase();
     if (firebaseData) {
-      // Only log in development to reduce console spam
-      if (import.meta.env.DEV) {
-        console.log("Firebase data received:", firebaseData);
-      }
+      console.log("Firebase data received:", firebaseData);
       
       // Ensure projects and experience are arrays
       if (!Array.isArray(firebaseData.projects)) {
-        if (import.meta.env.DEV) {
-          console.warn("Projects is not an array, setting to empty array");
-        }
+        console.warn("Projects is not an array, setting to empty array");
         firebaseData.projects = [];
       }
       if (!Array.isArray(firebaseData.experience)) {
-        if (import.meta.env.DEV) {
-          console.warn("Experience is not an array, setting to empty array");
-        }
+        console.warn("Experience is not an array, setting to empty array");
         firebaseData.experience = [];
       }
       
@@ -125,12 +118,12 @@ export async function loadData(): Promise<PortfolioData> {
         return p;
       });
       
-      if (import.meta.env.DEV) {
-        console.log("Processed Firebase data - projects:", firebaseData.projects.length, "experience:", firebaseData.experience.length);
-      }
+      console.log("Processed Firebase data - projects:", firebaseData.projects.length, "experience:", firebaseData.experience.length);
       
-      // Don't save to localStorage automatically - it triggers storage events that cause refresh loops
-      // localStorage is only used as a fallback if Firebase fails
+      // Also save to localStorage as backup
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(firebaseData));
+      } catch {}
       return firebaseData;
     }
   } catch (error) {
