@@ -144,6 +144,7 @@ const Index = () => {
   // Don't listen to storage events - they cause refresh loops
 =======
   // Also listen for storage changes (in case data is updated in another tab/window)
+<<<<<<< HEAD
   // But only listen, don't auto-refresh on every event
 >>>>>>> parent of ec8c528 (es)
 =======
@@ -190,26 +191,38 @@ const Index = () => {
       // Only refresh if it's from another tab/window (not our own changes)
       if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
 =======
+=======
+  useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout;
+>>>>>>> parent of 61b1522 (rte)
     
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if it's from another tab/window (not our own changes)
-      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          lastRefreshTime = Date.now();
-          refresh();
-        }, 1000);
-      }
+    const handleStorageChange = () => {
+      // Debounce storage changes
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => {
+        refresh();
+      }, 300);
     };
-    
     const handleDataUpdate = () => {
+<<<<<<< HEAD
       // Only refresh if enough time has passed
       if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
 >>>>>>> parent of ec8c528 (es)
+=======
+      // Debounce custom events
+      clearTimeout(refreshTimeout);
+      refreshTimeout = setTimeout(() => {
+        refresh();
+      }, 100);
+    };
+    const handleVisibilityChange = () => {
+      // Only refresh when page becomes visible (e.g., navigating back)
+      if (document.visibilityState === 'visible') {
+>>>>>>> parent of 61b1522 (rte)
         clearTimeout(refreshTimeout);
         refreshTimeout = setTimeout(() => {
-          lastRefreshTime = Date.now();
           refresh();
+<<<<<<< HEAD
         }, 1000);
       }
     };
@@ -297,6 +310,12 @@ const Index = () => {
 =======
     // Remove focus and visibility listeners - they cause too many refreshes
     // Only listen to actual storage events from other tabs
+=======
+        }, 200);
+      }
+    };
+    
+>>>>>>> parent of 61b1522 (rte)
     window.addEventListener('storage', handleStorageChange);
 >>>>>>> parent of ec8c528 (es)
 =======
