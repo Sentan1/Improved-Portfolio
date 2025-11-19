@@ -49,13 +49,14 @@ const Index = () => {
   const refresh = useCallback(async () => {
     if (isRefreshingRef.current) return; // Prevent concurrent refreshes
     isRefreshingRef.current = true;
-    try {
-      const data = await loadData();
-      console.log('Refreshing data, projects count:', data.projects.length);
-      console.log('Projects:', data.projects);
-      console.log('Experience:', data.experience);
-      
-      if (data.projects && Array.isArray(data.projects)) {
+      try {
+        const data = await loadData();
+        // Only log in development to reduce console spam
+        if (import.meta.env.DEV) {
+          console.log('Refreshing data, projects count:', data.projects.length);
+        }
+        
+        if (data.projects && Array.isArray(data.projects)) {
         setProjects([...data.projects]); // Create new array to force re-render
       } else {
         console.warn('Projects data is not an array:', data.projects);
@@ -121,232 +122,49 @@ const Index = () => {
 
   // Refresh when location changes (e.g., returning from add project page)
   const prevLocationRef = useRef<string>(location.pathname + location.hash);
+  const hasInitializedRef = useRef(false);
+  
   useEffect(() => {
     const currentLocation = location.pathname + location.hash;
-    // Only refresh if location actually changed (not just on mount)
-    if (currentLocation !== prevLocationRef.current) {
+    // Only refresh if location actually changed (not on initial mount)
+    if (hasInitializedRef.current && currentLocation !== prevLocationRef.current) {
       prevLocationRef.current = currentLocation;
       // Add a small delay to ensure data is updated
       const timer = setTimeout(() => {
         refresh();
       }, 100);
       return () => clearTimeout(timer);
+    } else if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      prevLocationRef.current = currentLocation;
     }
   }, [location.pathname, location.hash, refresh]);
   
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
   // Only listen for manual data update events (from admin actions)
   // Don't listen to storage events - they cause refresh loops
-=======
-  // Also listen for storage changes (in case data is updated in another tab/window)
-<<<<<<< HEAD
-  // But only listen, don't auto-refresh on every event
->>>>>>> parent of ec8c528 (es)
-=======
-  // Also listen for storage changes (in case data is updated in another tab/window)
-  // But only listen, don't auto-refresh on every event
->>>>>>> parent of ec8c528 (es)
-=======
-  // Also listen for storage changes (in case data is updated in another tab/window)
-  // But only listen, don't auto-refresh on every event
->>>>>>> parent of ec8c528 (es)
-=======
-  // Also listen for storage changes (in case data is updated in another tab/window)
-  // But only listen, don't auto-refresh on every event
->>>>>>> parent of ec8c528 (es)
-=======
-  // Also listen for storage changes (in case data is updated in another tab/window)
-  // But only listen, don't auto-refresh on every event
->>>>>>> parent of ec8c528 (es)
   useEffect(() => {
     let refreshTimeout: NodeJS.Timeout;
     let lastRefreshTime = 0;
-    const MIN_REFRESH_INTERVAL = 5000; // Don't refresh more than once per 5 seconds
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
+    const MIN_REFRESH_INTERVAL = 10000; // Don't refresh more than once per 10 seconds
     
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if it's from another tab/window (not our own changes)
-      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
-=======
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if it's from another tab/window (not our own changes)
-      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
-=======
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if it's from another tab/window (not our own changes)
-      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
-=======
-    
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if it's from another tab/window (not our own changes)
-      if (e.key === 'portfolio:data:v1' && Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
-=======
-=======
-  useEffect(() => {
-    let refreshTimeout: NodeJS.Timeout;
->>>>>>> parent of 61b1522 (rte)
-    
-    const handleStorageChange = () => {
-      // Debounce storage changes
-      clearTimeout(refreshTimeout);
-      refreshTimeout = setTimeout(() => {
-        refresh();
-      }, 300);
-    };
     const handleDataUpdate = () => {
-<<<<<<< HEAD
-      // Only refresh if enough time has passed
+      // Only refresh if enough time has passed (prevents loops)
       if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
->>>>>>> parent of ec8c528 (es)
-=======
-      // Debounce custom events
-      clearTimeout(refreshTimeout);
-      refreshTimeout = setTimeout(() => {
-        refresh();
-      }, 100);
-    };
-    const handleVisibilityChange = () => {
-      // Only refresh when page becomes visible (e.g., navigating back)
-      if (document.visibilityState === 'visible') {
->>>>>>> parent of 61b1522 (rte)
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          refresh();
-<<<<<<< HEAD
-        }, 1000);
-      }
-    };
-    
-<<<<<<< HEAD
-    const handleDataUpdate = () => {
-      // Only refresh if enough time has passed
-      if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
->>>>>>> parent of ec8c528 (es)
         clearTimeout(refreshTimeout);
         refreshTimeout = setTimeout(() => {
           lastRefreshTime = Date.now();
           refresh();
-        }, 1000);
+        }, 500);
       }
     };
     
-<<<<<<< HEAD
-    const handleDataUpdate = () => {
-      // Only refresh if enough time has passed
-      if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
->>>>>>> parent of ec8c528 (es)
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          lastRefreshTime = Date.now();
-          refresh();
-        }, 1000);
-      }
-    };
-    
-<<<<<<< HEAD
-    const handleDataUpdate = () => {
-      // Only refresh if enough time has passed
-      if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
->>>>>>> parent of ec8c528 (es)
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          lastRefreshTime = Date.now();
-          refresh();
-        }, 1000);
-      }
-    };
-    
-<<<<<<< HEAD
-    const handleDataUpdate = () => {
-      // Only refresh if enough time has passed
-      if (Date.now() - lastRefreshTime > MIN_REFRESH_INTERVAL) {
-=======
-  // Also listen for storage changes (in case data is updated in another tab/window)
-  useEffect(() => {
-    let refreshTimeout: NodeJS.Timeout;
-    
-    const handleStorageChange = () => {
-      // Debounce storage changes
-      clearTimeout(refreshTimeout);
-      refreshTimeout = setTimeout(() => {
-        refresh();
-      }, 300);
-    };
-    const handleDataUpdate = () => {
-      // Debounce custom events
-      clearTimeout(refreshTimeout);
-      refreshTimeout = setTimeout(() => {
-        refresh();
-      }, 100);
-    };
-    const handleVisibilityChange = () => {
-      // Only refresh when page becomes visible (e.g., navigating back)
-      if (document.visibilityState === 'visible') {
->>>>>>> parent of 61b1522 (rte)
-        clearTimeout(refreshTimeout);
-        refreshTimeout = setTimeout(() => {
-          refresh();
-        }, 200);
-      }
-    };
-    
-<<<<<<< HEAD
-<<<<<<< HEAD
     // Only listen to custom events (fired manually after admin saves)
     // Don't listen to storage events - they cause infinite loops
-=======
-    window.addEventListener('storage', handleStorageChange);
->>>>>>> parent of 61b1522 (rte)
-=======
-    // Remove focus and visibility listeners - they cause too many refreshes
-    // Only listen to actual storage events from other tabs
-=======
-        }, 200);
-      }
-    };
-    
->>>>>>> parent of 61b1522 (rte)
-    window.addEventListener('storage', handleStorageChange);
->>>>>>> parent of ec8c528 (es)
-=======
-    // Remove focus and visibility listeners - they cause too many refreshes
-    // Only listen to actual storage events from other tabs
-    window.addEventListener('storage', handleStorageChange);
->>>>>>> parent of ec8c528 (es)
-=======
-    // Remove focus and visibility listeners - they cause too many refreshes
-    // Only listen to actual storage events from other tabs
-    window.addEventListener('storage', handleStorageChange);
->>>>>>> parent of ec8c528 (es)
-=======
-    // Remove focus and visibility listeners - they cause too many refreshes
-    // Only listen to actual storage events from other tabs
-    window.addEventListener('storage', handleStorageChange);
->>>>>>> parent of ec8c528 (es)
-=======
-    // Remove focus and visibility listeners - they cause too many refreshes
-    // Only listen to actual storage events from other tabs
-    window.addEventListener('storage', handleStorageChange);
->>>>>>> parent of ec8c528 (es)
     window.addEventListener('portfolio-data-updated', handleDataUpdate);
-    window.addEventListener('focus', handleStorageChange);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       clearTimeout(refreshTimeout);
-      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('portfolio-data-updated', handleDataUpdate);
-      window.removeEventListener('focus', handleStorageChange);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [refresh]);
 
